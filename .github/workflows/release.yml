@@ -1,10 +1,9 @@
 name: Release
 
-# A tag such as v0.2.0 builds OpenWren for Linux, Windows and macOS, publishes a
-# GitHub Release, updates the apt and rpm repositories at packages.openwren.app,
-# and publishes the signed update files and latest.json that tell every
-# installed copy a new version exists.
-# Setup (secrets, variables, signing key): docs/packaging.md
+# A tag such as v0.2.0 builds VN Mail for Linux, Windows and macOS and
+# publishes a GitHub Release with the packages. VN Mail has no in-app
+# updater and no package repository, so there is no signing step and no
+# upload anywhere else: a new release is just the files on the release page.
 
 on:
   push:
@@ -14,7 +13,7 @@ on:
 # Nothing is granted by default; each job asks for what it needs.
 permissions: {}
 
-# Two releases must not rewrite the repositories at the same time.
+# Two releases must not publish at the same time.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -159,14 +158,14 @@ jobs:
 
       - run: pnpm tauri build --target universal-apple-darwin --bundles app,dmg -- --locked
 
-      # The .dmg is what people download; the .app.tar.gz is what the in-app updater installs.
-      - name: Collect the disk image and the update archive
+      # The .dmg is what people download; the .app.tar.gz is the same app as an archive.
+      - name: Collect the disk image and the app archive
         run: |
           version=$(jq -r .version src-tauri/tauri.conf.json)
           bundle=src-tauri/target/universal-apple-darwin/release/bundle
           mkdir release
           cp "$bundle"/dmg/*.dmg release/
-          tar -czf "release/OpenWren_${version}_universal.app.tar.gz" -C "$bundle/macos" OpenWren.app
+          tar -czf "release/VN-Mail_${version}_universal.app.tar.gz" -C "$bundle/macos" "VN Mail.app"
           cd release
           shasum -a 256 -- *.dmg *.app.tar.gz > SHA256SUMS.macos
           cat SHA256SUMS.macos
@@ -178,83 +177,15 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  # Signs what the in-app updater installs. An installed OpenWren refuses any update
-  # whose signature was not made with this key (its public half is in tauri.conf.json).
-  # This job holds the update key and nothing else: no package repository key, no
-  # storage token, a read-only token. The signing tool comes from tools/signer, whose
-  # package-lock.json records the hash of every file; npm refuses anything else.
-  sign-updates:
-    name: Sign the update files
+  # Publishes what the build jobs produced as a GitHub Release. It needs no
+  # secrets beyond the built-in token, and runs only this repository's own steps.
+  publish:
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-22.04
-    environment: release
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          pattern: packages-*
-          merge-multiple: true
-          path: release/
-
-      - name: Check the packages against their checksums
-        run: |
-          cd release
-          for sums in SHA256SUMS.linux SHA256SUMS.windows SHA256SUMS.macos; do
-            sha256sum --check --strict "$sums"
-          done
-
-      # npm ci installs exactly what the lockfile lists and checks each hash.
-      # --ignore-scripts: no package gets to run code while it is installed.
-      - name: Install the signing tool from its lockfile
-        run: npm ci --ignore-scripts --no-audit --no-fund
-        working-directory: tools/signer
-
-      - name: Sign the update files
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-        run: |
-          mkdir signatures
-          for file in release/*.AppImage release/*-setup.exe release/*.app.tar.gz; do
-            tools/signer/node_modules/.bin/tauri signer sign "$file" > /dev/null
-            test -s "$file.sig"
-            mv "$file.sig" signatures/
-            echo "signed: $(basename "$file")"
-          done
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: update-signatures
-          path: signatures/
-          if-no-files-found: error
-          retention-days: 3
-
-  # Publishes what the build jobs produced. It holds the package repository key and
-  # the storage token, not the update key: the update signatures arrive ready-made
-  # from the job above. It runs only this repository's own scripts.
-  publish:
-    needs: [build-linux, build-windows, build-macos, sign-updates]
-    runs-on: ubuntu-22.04
-    environment: release
     permissions:
       contents: write
-    env:
-      OPENWREN_GPG_KEY: ${{ vars.GPG_KEY_ID }}
-      R2_BUCKET: ${{ vars.R2_BUCKET }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Install packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm createrepo-c apt-utils
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -272,102 +203,17 @@ jobs:
           rm SHA256SUMS.linux SHA256SUMS.windows SHA256SUMS.macos
           cat SHA256SUMS
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: update-signatures
-          path: signatures/
-
-      - name: Put each update signature beside its file
-        run: |
-          for file in release/*.AppImage release/*-setup.exe release/*.app.tar.gz; do
-            test -s "signatures/$(basename "$file").sig"
-            mv "signatures/$(basename "$file").sig" "$file.sig"
-          done
-
-      - name: Import the package repository key
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        run: |
-          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
-          gpg --batch --list-secret-keys "$OPENWREN_GPG_KEY"
-
-      - name: Download the current repositories
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
-          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-        run: |
-          # Only the apt and rpm repositories are needed; earlier releases stay in the bucket untouched.
-          mkdir -p site/apt site/rpm
-          aws s3 sync "s3://$R2_BUCKET/" site/ --endpoint-url "$R2_ENDPOINT" --no-progress \
-            --exclude "releases/*" --exclude "latest/*" --exclude "preview/*" --exclude "latest.json"
-
-      # Every package already in the bucket must come from an earlier release;
-      # otherwise the new indexes would vouch for a file someone planted there.
-      - name: Check what the bucket already holds
-        run: scripts/verify-repo.sh site
-
-      - name: Build the apt and rpm repositories
-        run: |
-          scripts/make-apt-repo.sh release site/apt
-          scripts/make-rpm-repo.sh release site/rpm
-          cp site/apt/key.gpg site/apt/key.asc site/
-
-      - name: Lay out this release and the version file
-        run: |
-          version=${GITHUB_REF_NAME#v}
-          mkdir -p "site/releases/$version" site/latest
-          cp release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/*.sig release/SHA256SUMS "site/releases/$version/"
-          # Addresses that stay the same from release to release, for the download page.
-          cp release/*.AppImage site/latest/OpenWren-linux-x86_64.AppImage
-          cp release/*-setup.exe site/latest/OpenWren-windows-x64-setup.exe
-          cp release/*.dmg site/latest/OpenWren-macos-universal.dmg
-          cp release/SHA256SUMS site/latest/SHA256SUMS
-          scripts/make-update-manifest.sh "$version" release site/latest.json
-          cat site/latest.json
-
       - name: Create the GitHub Release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Safe to run again: a rerun after a failed upload finds the release already there.
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" --clobber \
-              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/SHA256SUMS
+              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/SHA256SUMS
           else
             gh release create "$GITHUB_REF_NAME" \
-              --title "OpenWren ${GITHUB_REF_NAME#v}" \
+              --title "VN Mail ${GITHUB_REF_NAME#v}" \
               --generate-notes \
-              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/SHA256SUMS
+              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/SHA256SUMS
           fi
-
-      - name: Upload the repositories
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
-          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-        run: |
-          # The storage service sometimes times out on a large file: try each step up to four times.
-          retry() {
-            for attempt in 1 2 3 4; do
-              "$@" && return 0
-              echo "::warning::attempt $attempt failed: $1 $2 $3"
-              sleep $((attempt * 20))
-            done
-            return 1
-          }
-          # Packages first, indexes and the version file last, so nothing names a file that is not there yet.
-          retry aws s3 sync site/ "s3://$R2_BUCKET/" --endpoint-url "$R2_ENDPOINT" --no-progress \
-            --exclude "apt/dists/*" --exclude "rpm/repodata/*" --exclude "latest.json"
-          retry aws s3 sync site/apt/dists/ "s3://$R2_BUCKET/apt/dists/" --endpoint-url "$R2_ENDPOINT" --no-progress \
-            --cache-control "max-age=300"
-          retry aws s3 sync site/rpm/repodata/ "s3://$R2_BUCKET/rpm/repodata/" --endpoint-url "$R2_ENDPOINT" --no-progress \
-            --cache-control "max-age=300" --delete
-          retry aws s3 cp site/latest.json "s3://$R2_BUCKET/latest.json" --endpoint-url "$R2_ENDPOINT" --no-progress \
-            --cache-control "max-age=300" --content-type "application/json"

@@ -1,7 +1,7 @@
 name: Packages
 
 # Builds the .deb and .rpm once, then installs each in clean containers and
-# runs `openwren --version`.
+# runs `vnmail --version`.
 
 on:
   pull_request:
@@ -102,8 +102,8 @@ jobs:
         if: matrix.kind == 'rpm'
         run: dnf install -y ./packages/rpm/*.rpm
 
-      - name: Run openwren --version
+      - name: Run vnmail --version
         run: |
-          out=$(openwren --version)
+          out=$(vnmail --version)
           echo "$out"
-          echo "$out" | grep -Eq '^openwren [0-9]+\.[0-9]+\.[0-9]+'
+          echo "$out" | grep -Eq '^vnmail [0-9]+\.[0-9]+\.[0-9]+'
