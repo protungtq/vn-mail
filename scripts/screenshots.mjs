@@ -67,7 +67,7 @@ async function shots(scheme) {
   await page.locator('button[aria-label="Settings"]').click();
   await page.locator('nav[aria-label="Settings sections"] button', { hasText: "About" }).click();
   await page.locator("[role=dialog] button", { hasText: "welcome screens" }).click();
-  await page.waitForSelector('[aria-label="Welcome to OpenWren"]');
+  await page.waitForSelector('[aria-label="Welcome to VN Mail"]');
   await page.waitForTimeout(300);
   await page.screenshot({ path: name("welcome") });
   await context.close();
