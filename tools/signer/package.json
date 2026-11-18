@@ -1,8 +1,0 @@
-{
-  "name": "openwren-signer",
-  "private": true,
-  "description": "Only Tauri's signing tool, at one exact version, for the release workflow. package-lock.json records the hash of every file it installs.",
-  "dependencies": {
-    "@tauri-apps/cli": "2.12.4"
-  }
-}
