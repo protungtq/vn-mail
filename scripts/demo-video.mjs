@@ -28,7 +28,7 @@ function findChrome() {
   throw new Error("No Chromium found. Set CHROME=/path/to/chrome.");
 }
 
-const work = mkdtempSync(join(tmpdir(), "openwren-demo-"));
+const work = mkdtempSync(join(tmpdir(), "vnmail-demo-"));
 const browser = await chromium.launch({ executablePath: findChrome() });
 const context = await browser.newContext({ viewport: size, deviceScaleFactor: 2 });
 // A recording shows no mouse pointer, so the page draws one that follows the mouse.

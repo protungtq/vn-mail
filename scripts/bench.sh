@@ -10,15 +10,15 @@
 # mailbox in a temporary folder and never touches your own mail.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-bin="$root/src-tauri/target/release/openwren"
+bin="$root/src-tauri/target/release/vnmail"
 count=${1:-50000}
 starts=${STARTS:-10}
 idle=${IDLE_SECONDS:-300}
 [ -x "$bin" ] || { echo "Build the app first: pnpm tauri build --bundles deb" >&2; exit 1; }
-if pgrep -x openwren >/dev/null; then echo "Close OpenWren first." >&2; exit 1; fi
+if pgrep -x vnmail >/dev/null; then echo "Close VN Mail first." >&2; exit 1; fi
 
 data=$(mktemp -d)
-trap 'pkill -x openwren 2>/dev/null || true; rm -rf "$data"' EXIT
+trap 'pkill -x vnmail 2>/dev/null || true; rm -rf "$data"' EXIT
 (cd "$root/src-tauri" && cargo run --quiet --release --example make_bench_data -- "$data" "$count")
 export XDG_DATA_HOME="$data" OPENWREN_NO_STATS=1
 
@@ -30,7 +30,7 @@ echo "## Start-up ($count messages, $starts starts)"
 inside=(); wall=()
 for i in $(seq "$starts"); do
   t0=$(date +%s%N)
-  ms=$(OPENWREN_TIMING=exit "$bin" 2>&1 >/dev/null | awk '/^openwren-ready-ms/ { print $2 }')
+  ms=$(OPENWREN_TIMING=exit "$bin" 2>&1 >/dev/null | awk '/^vnmail-ready-ms/ { print $2 }')
   t1=$(date +%s%N)
   inside+=("$ms"); wall+=("$(( (t1 - t0) / 1000000 ))")
   echo "start $i: inbox on screen after ${ms} ms (whole run, including quitting: ${wall[-1]} ms)"

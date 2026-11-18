@@ -2,8 +2,8 @@
 //! can see how many people use VN Mail without knowing who they are.
 //!
 //! Disabled in this fork: VN Mail has no usage-count server, so `enabled`
-//! always answers false and nothing is ever sent. The code is kept so the
-//! count can be switched on later by pointing ENDPOINT at a server.
+//! always answers false and nothing is ever sent. The code is kept, inert:
+//! ENDPOINT names no server.
 //!
 //! Nothing is sent unless the user said yes to it. There is no install id.
 //! The request says which version and kind of system it comes from, and
@@ -23,8 +23,8 @@ use serde::Serialize;
 use crate::db;
 use crate::error::Result;
 
-/// Where the count would be sent. Unused while `enabled` answers false.
-pub const ENDPOINT: &str = "https://stats.openwren.app/ping";
+/// No server: this fork collects no usage count. Never contacted, because `enabled` answers false.
+pub const ENDPOINT: &str = "";
 
 /// Exactly what is sent. Field names are short because the server stores only counters.
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -300,14 +300,14 @@ mod tests {
     #[test]
     fn describes_the_system_without_anything_personal() {
         let ubuntu = "NAME=\"Ubuntu\"\nID=ubuntu\nID_LIKE=debian\nVERSION_ID=\"24.04\"\nPRETTY_NAME=\"Ubuntu 24.04.1 LTS\"\n";
-        assert_eq!(describe(ubuntu, "/usr/bin/openwren", false, false), ("deb".into(), "ubuntu-24".into()), "major version only");
-        assert_eq!(describe(ubuntu, "/home/someone/build/openwren", false, false), ("other".into(), "ubuntu-24".into()));
-        assert_eq!(describe(ubuntu, "/tmp/.mount_x/usr/bin/openwren", true, false).0, "appimage");
+        assert_eq!(describe(ubuntu, "/usr/bin/vnmail", false, false), ("deb".into(), "ubuntu-24".into()), "major version only");
+        assert_eq!(describe(ubuntu, "/home/someone/build/vnmail", false, false), ("other".into(), "ubuntu-24".into()));
+        assert_eq!(describe(ubuntu, "/tmp/.mount_x/usr/bin/vnmail", true, false).0, "appimage");
         let fedora = "ID=fedora\nVERSION_ID=41\n";
-        assert_eq!(describe(fedora, "/usr/bin/openwren", false, false), ("rpm".into(), "fedora-41".into()));
+        assert_eq!(describe(fedora, "/usr/bin/vnmail", false, false), ("rpm".into(), "fedora-41".into()));
         let arch = "ID=arch\nBUILD_ID=rolling\n";
-        assert_eq!(describe(arch, "/usr/bin/openwren", false, false), ("other".into(), "arch".into()));
-        assert_eq!(describe("", "/usr/bin/openwren", false, true), ("flatpak".into(), "other".into()));
+        assert_eq!(describe(arch, "/usr/bin/vnmail", false, false), ("other".into(), "arch".into()));
+        assert_eq!(describe("", "/usr/bin/vnmail", false, true), ("flatpak".into(), "other".into()));
         // A hand-edited file cannot smuggle text into the request.
         assert_eq!(describe("ID=\"my host; rm -rf\"\nVERSION_ID=\"1.2 beta\"\n", "/usr/bin/x", false, false).1, "myhostrm-rf-1");
     }

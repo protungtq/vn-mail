@@ -37,13 +37,13 @@
     "linux": {
       "appimage": {},
       "deb": {
-        "desktopTemplate": "openwren.desktop"
+        "desktopTemplate": "vnmail.desktop"
       },
       "rpm": {
         "depends": [
           "libayatana-appindicator-gtk3"
         ],
-        "desktopTemplate": "openwren.desktop"
+        "desktopTemplate": "vnmail.desktop"
       }
     },
     "longDescription": "VN Mail is a mail app for Gmail and any IMAP account. It keeps your mail in an encrypted database on your own computer, removes trackers and warns about suspicious messages.",
