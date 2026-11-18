@@ -11,7 +11,7 @@ import { SearchChips } from "./SearchChips";
 import { MOD, mod } from "../lib/keys";
 
 /** Drag-and-drop type for message ids dragged onto a folder. */
-export const DRAG_TYPE = "application/x-openwren-messages";
+export const DRAG_TYPE = "application/x-vnmail-messages";
 
 interface Section {
   label: string;

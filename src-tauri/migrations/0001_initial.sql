@@ -1,4 +1,4 @@
--- OpenWren schema, version 1. See PLAN.md section 3.
+-- VN Mail schema, version 1. See PLAN.md section 3.
 -- Secrets (passwords, OAuth tokens) are never stored here; they live in the system keyring.
 -- Dates are Unix seconds (UTC).
 

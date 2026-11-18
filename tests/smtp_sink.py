@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A tiny SMTP server for tests. It accepts any sign-in and delivers each
 message into the recipient's INBOX on the local Dovecot test server, so a
-message sent by OpenWren arrives like real mail.
+message sent by VN Mail arrives like real mail.
 
 Usage: python3 tests/smtp_sink.py [smtp_port] [imap_port]
 """
@@ -26,7 +26,7 @@ async def handle(reader, writer):
         await writer.drain()
 
     recipients = []
-    await say("220 openwren test sink")
+    await say("220 vnmail test sink")
     while True:
         raw = await reader.readline()
         if not raw:

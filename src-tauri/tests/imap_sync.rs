@@ -6,10 +6,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use openwren_lib::db::{self, Db};
-use openwren_lib::model::{AccountSettings, ImapSettings, SearchFilters, Security};
-use openwren_lib::sync::{self, Silent};
-use openwren_lib::{imap, store};
+use vnmail_lib::db::{self, Db};
+use vnmail_lib::model::{AccountSettings, ImapSettings, SearchFilters, Security};
+use vnmail_lib::sync::{self, Silent};
+use vnmail_lib::{imap, store};
 
 const USER: &str = "katy@work.test";
 
@@ -140,7 +140,7 @@ async fn syncs_reads_and_searches_a_real_mailbox() {
     assert!(db::search(&db::lock(&db), "Fresh arrival", &filters("any"), now, 50).unwrap().is_empty());
 
     // ----- moving, undo, deleting -----
-    use openwren_lib::actions;
+    use vnmail_lib::actions;
     let count = |folder: i64| db::list_messages(&db::lock(&db), folder, None, 1000, 0, i64::MAX).unwrap().len();
     let archive = folders.iter().find(|f| f.role == "archive").unwrap().id;
     let trash = folders.iter().find(|f| f.role == "trash").unwrap().id;
@@ -205,7 +205,7 @@ async fn syncs_reads_and_searches_a_real_mailbox() {
     let root = all.iter().find(|m| m.subject == "Project tracker design doc").unwrap();
     let root_id = db::message_detail(&db::lock(&db), root.id).unwrap().message_id_header.unwrap();
     other_client
-        .append("Sent", Some("(\\Seen)"), None, format!("From: Katy Reid <katy@work.test>\r\nTo: elvia@contoso.example\r\nSubject: Re: Project tracker design doc\r\nMessage-ID: <reply-1@openwren.test>\r\nIn-Reply-To: <{root_id}>\r\nReferences: <{root_id}>\r\n\r\nThanks Elvia.\r\n"))
+        .append("Sent", Some("(\\Seen)"), None, format!("From: Katy Reid <katy@work.test>\r\nTo: elvia@contoso.example\r\nSubject: Re: Project tracker design doc\r\nMessage-ID: <reply-1@vnmail.test>\r\nIn-Reply-To: <{root_id}>\r\nReferences: <{root_id}>\r\n\r\nThanks Elvia.\r\n"))
         .await
         .unwrap();
     sync::sync_headers(&db, &mut session, account, &Silent).await.unwrap();

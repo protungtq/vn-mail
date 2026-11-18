@@ -13,7 +13,7 @@ labels: bug
 2.
 
 **Version and system**
-- OpenWren version (Settings → About):
+- VN Mail version (Settings → About):
 - Distribution and desktop (for example Ubuntu 24.04, GNOME on Wayland):
 - Installed from: apt / dnf / AppImage / source
 - Account type: Gmail / other IMAP (provider name helps)

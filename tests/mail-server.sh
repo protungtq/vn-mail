@@ -4,12 +4,12 @@
 # Any user can log in with the password "pass".
 set -e
 cd "$(dirname "$0")"
-docker rm -f openwren-dovecot >/dev/null 2>&1 || true
-docker run -d --name openwren-dovecot \
+docker rm -f vnmail-dovecot >/dev/null 2>&1 || true
+docker run -d --name vnmail-dovecot \
   -p 127.0.0.1:3143:143 -p 127.0.0.1:3993:993 -p 127.0.0.1:3110:110 -p 127.0.0.1:3587:587 \
   dovecot/dovecot:2.3-latest >/dev/null
 sleep 2
-docker exec -i openwren-dovecot sh -c '
+docker exec -i vnmail-dovecot sh -c '
   cat > /tmp/extra.conf
   sed -i "/separator = \//r /tmp/extra.conf" /etc/dovecot/dovecot.conf
   echo "disable_plaintext_auth = no" >> /etc/dovecot/dovecot.conf

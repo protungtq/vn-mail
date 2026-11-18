@@ -8,18 +8,18 @@
 //! one (the key is created if this computer has none yet). The account has no
 //! mail server, so the app shows the mailbox as it is and syncs nothing.
 
-use openwren_lib::model::AccountSettings;
-use openwren_lib::{db, sample_data, store};
+use vnmail_lib::model::AccountSettings;
+use vnmail_lib::{db, sample_data, store};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
     let (Some(folder), Some(count)) = (args.next(), args.next().and_then(|n| n.parse::<usize>().ok())) else {
         return Err("usage: make_bench_data <folder> <messages>".into());
     };
-    let dir = std::path::Path::new(&folder).join("org.openwren.app");
+    let dir = std::path::Path::new(&folder).join("asia.so1.vnmail");
     std::fs::create_dir_all(&dir)?;
-    let database = dir.join("openwren.db");
-    let mut conn = store::open(&database, &openwren_lib::database_key(&database)?)?;
+    let database = dir.join("vnmail.db");
+    let mut conn = store::open(&database, &vnmail_lib::database_key(&database)?)?;
     let account = db::insert_account(&conn, "katy@work.test", "Katy Reid", "imap", &AccountSettings::default()).map_err(|e| e.0)?;
     let inbox = db::upsert_folder(&conn, account, "INBOX", "Inbox", "inbox").map_err(|e| e.0)?;
     for (path, name, role) in [("Drafts", "Drafts", "drafts"), ("Sent", "Sent", "sent"), ("Trash", "Trash", "trash"), ("Archive", "Archive", "archive")] {

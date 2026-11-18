@@ -224,9 +224,9 @@ function Unsubscribe({ sender, kind, to }: { sender: string; kind: "one-click" |
   // Say where the request goes: the address comes from the message, and the reader should see it first.
   const how =
     kind === "one-click"
-      ? `OpenWren sends the request to ${to} for you.`
+      ? `VN Mail sends the request to ${to} for you.`
       : kind === "mail"
-        ? `OpenWren sends an unsubscribe message from your address to ${to}.`
+        ? `VN Mail sends an unsubscribe message from your address to ${to}.`
         : `The unsubscribe page at ${to} opens in your browser.`;
   return (
     <div className="mb-3 flex items-center gap-3 rounded-[10px] bg-canvas px-3 py-1.5 text-[13px] text-ink2">
@@ -288,7 +288,7 @@ export function ReadingPane() {
       <Centered>
         <IconMail size={36} stroke={1.25} />
         <p className="text-base text-ink">Add your first account</p>
-        <p>OpenWren keeps your mail on this computer and in sync with your mail server.</p>
+        <p>VN Mail keeps your mail on this computer and in sync with your mail server.</p>
         <Button variant="primary" onClick={() => setDialog("add-account")}>
           Add account
         </Button>

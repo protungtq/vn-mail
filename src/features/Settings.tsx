@@ -6,7 +6,7 @@ import type { AppInfo } from "../backend";
 import { RichText } from "../components/RichText";
 import { Button, Chip, IconButton, categories, fieldBox, fieldCaption } from "../components/ui";
 import { TEXT_SIZES, fontChoice } from "../lib/font";
-import { REPOSITORY, SPONSOR_PAGE, WEBSITE } from "../lib/links";
+import { REPOSITORY, WEBSITE } from "../lib/links";
 import { pictureFromFile, signatureHtml } from "../lib/signature";
 import { useStore } from "../store";
 import type { SettingsPage } from "../store";
@@ -528,14 +528,11 @@ function Privacy() {
       <Options label="Warn about suspicious mail" value={settings.phishing_warnings === "off" ? "off" : "on"} onChange={(v) => void setSetting("phishing_warnings", v)} options={onOff} />
       <p className={note}>A warning appears when your mail server could not confirm the sender, when the sender's name claims to be a company the address does not belong to, when a link shows one site but leads to another, or when an address imitates ordinary letters with look-alike ones from another alphabet.</p>
       <Options label="Company logos for well-known senders" value={settings.brand_logos === "off" ? "off" : "on"} onChange={(v) => void setSetting("brand_logos", v)} options={onOff} />
-      <p className={note}>The logos are part of OpenWren, so nothing is looked up online. A logo appears only when the address belongs to that company and your mail server confirmed the sender; while OpenWren is still learning which server that is, or if yours does no such checks, senders keep their initials.</p>
-      <Options label="Look for new versions" value={settings.update_check === "off" ? "off" : "on"} onChange={(v) => void setSetting("update_check", v)} options={onOff} />
-      <p className={note}>A few times a day OpenWren downloads one small public file that says which version is the newest, and tells you when yours is older. The request carries nothing about you or this computer.</p>
-      <Options label="Anonymous usage count" value={settings.usage_stats === "on" ? "on" : "off"} onChange={(v) => void setSetting("usage_stats", v)} options={onOff} />
-      <p className={note}>Once a day OpenWren tells the project that one more copy is in use. Knowing that people rely on it is what motivates the maintainer to keep the code maintained in the long term. It is sent only if you switch it on. The request carries no name, address, mail or identifier, and the server keeps only totals.</p>
+      <p className={note}>The logos are part of VN Mail, so nothing is looked up online. A logo appears only when the address belongs to that company and your mail server confirmed the sender; while VN Mail is still learning which server that is, or if yours does no such checks, senders keep their initials.</p>
+      <p className={note}>VN Mail sends no usage count and checks for no new version: both are disabled in this fork, so nothing about this copy ever leaves the computer except your own mail.</p>
       <div className="mb-1 font-semibold">Blocked senders</div>
       <p className="mb-2 text-[13px] text-ink2">
-        Mail from these senders goes straight to Junk, without a notification. To block someone, right-click one of their messages and choose "Block sender". OpenWren does the moving, so it happens while OpenWren is running.
+        Mail from these senders goes straight to Junk, without a notification. To block someone, right-click one of their messages and choose "Block sender". VN Mail does the moving, so it happens while VN Mail is running.
       </p>
       {blockedList.length === 0 ? (
         <p className="mb-4 text-[13px] text-ink3">Nobody is blocked.</p>
@@ -608,7 +605,7 @@ function Rules() {
 
   return (
     <>
-      <p className="mb-3 text-[13px] text-ink2">Rules run on new mail arriving in the inbox while OpenWren is open. The first rule that matches is applied.</p>
+      <p className="mb-3 text-[13px] text-ink2">Rules run on new mail arriving in the inbox while VN Mail is open. The first rule that matches is applied.</p>
       {rules.map((r) => (
         <div key={r.id} className="mb-2 flex items-center gap-3 rounded-[10px] border border-edge px-3 py-2">
           <input type="checkbox" aria-label={`Enable ${r.name}`} checked={r.enabled} onChange={(e) => void backend.saveRule({ ...r, enabled: e.target.checked }).then(reload)} />
@@ -719,7 +716,7 @@ function Notifications() {
         onChange={(v) => void setSetting("close_to_tray", v)}
         options={[
           ["on", "Keep running in the tray"],
-          ["off", "Quit OpenWren"],
+          ["off", "Quit VN Mail"],
         ]}
       />
       <Options
@@ -727,11 +724,11 @@ function Notifications() {
         value={settings.start_at_login === "off" ? "off" : "on"}
         onChange={(v) => void setSetting("start_at_login", v)}
         options={[
-          ["on", "Start OpenWren in the tray"],
-          ["off", "Do not start OpenWren"],
+          ["on", "Start VN Mail in the tray"],
+          ["off", "Do not start VN Mail"],
         ]}
       />
-      <p className="text-[13px] text-ink2">Notifications appear only while OpenWren is running. In the tray it keeps checking for mail; use the tray icon to open it again or to quit.</p>
+      <p className="text-[13px] text-ink2">Notifications appear only while VN Mail is running. In the tray it keeps checking for mail; use the tray icon to open it again or to quit.</p>
     </>
   );
 }
@@ -748,8 +745,8 @@ const builtWith: [string, string][] = [
 
 /** The command that installs a new version on systems where apt or dnf does it. */
 const SYSTEM_UPDATE: Record<string, string> = {
-  deb: "sudo apt update && sudo apt install --only-upgrade openwren",
-  rpm: "sudo dnf upgrade openwren",
+  deb: "sudo apt update && sudo apt install --only-upgrade vnmail",
+  rpm: "sudo dnf upgrade vnmail",
 };
 
 /** Whether a newer version exists, and the way to get it for this kind of installation. */
@@ -775,7 +772,7 @@ function Updates({ version }: { version: string }) {
     setState("installing");
     setError("");
     try {
-      await backend.installUpdate(); // OpenWren restarts when this succeeds
+      await backend.installUpdate(); // VN Mail restarts when this succeeds
     } catch (e) {
       setError(errorText(e));
       setState("idle");
@@ -785,7 +782,7 @@ function Updates({ version }: { version: string }) {
   if (!update) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-edge px-3 py-2.5">
-        <span className="text-ink2">{state === "current" ? `Version ${version} is the newest.` : state === "checking" ? "Checking…" : "OpenWren looks for a new version a few times a day."}</span>
+        <span className="text-ink2">{state === "current" ? `Version ${version} is the newest.` : state === "checking" ? "Checking…" : "VN Mail does not check for new versions."}</span>
         <Button className="ml-auto h-7" onClick={() => void check()}>
           Check now
         </Button>
@@ -803,7 +800,7 @@ function Updates({ version }: { version: string }) {
           <Button variant="primary" onClick={() => void install()}>
             {state === "installing" ? "Installing…" : "Install and restart"}
           </Button>
-          <span className="text-[13px] text-ink2">The update is checked against OpenWren's signing key before it is installed.</span>
+          <span className="text-[13px] text-ink2">The update is checked against VN Mail's signing key before it is installed.</span>
         </div>
       )}
       {update.how === "system" && command && (
@@ -821,7 +818,7 @@ function Updates({ version }: { version: string }) {
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
-          <p className="mt-1.5 text-xs text-ink3">Then quit OpenWren from the tray and start it again.</p>
+          <p className="mt-1.5 text-xs text-ink3">Then quit VN Mail from the tray and start it again.</p>
         </>
       )}
       {(update.how === "download" || (update.how === "system" && !command)) && (
@@ -854,7 +851,7 @@ function About() {
       <div className="flex items-center gap-4">
         <img src={logo} alt="" className="size-16" />
         <div>
-          <div className="text-lg font-semibold">OpenWren</div>
+          <div className="text-lg font-semibold">VN Mail</div>
           <div className="text-ink2">{info ? `Version ${info.version}` : "Browser preview on sample mail"}</div>
         </div>
       </div>
@@ -864,7 +861,7 @@ function About() {
         <div className={row}>
           <span className={name}>Licence</span>
           <span>
-            Apache License, version 2.0. OpenWren is free and open source: you may use, study, share and change it. It comes with no warranty.{" "}
+            Apache License, version 2.0. VN Mail is free and open source: you may use, study, share and change it. It comes with no warranty.{" "}
             <button type="button" className="text-brand underline" onClick={() => void backend.openLink("https://www.apache.org/licenses/LICENSE-2.0")}>
               Read the licence
             </button>
@@ -878,7 +875,7 @@ function About() {
           <>
             <div className={row}>
               <span className={name}>Mail database</span>
-              <span className="selectable break-all">{info.dataDir}/openwren.db</span>
+              <span className="selectable break-all">{info.dataDir}/vnmail.db</span>
             </div>
             <div className={row}>
               <span className={name}>Encryption</span>
@@ -919,19 +916,19 @@ function Sponsor() {
         <IconHeart size={20} />
       </div>
       <div className="min-w-0">
-        <div className="font-semibold">OpenWren is free. Sponsors keep it that way.</div>
+        <div className="font-semibold">VN Mail is free and open source.</div>
         <p className="mt-1 text-[13px] text-ink2">
-          No ads and no data to sell. If OpenWren is your daily mail app, a few dollars a month pays for the time to fix bugs, answer security reports and keep up with mail providers, and for signed installers on Windows and macOS.
+          No ads and no data to sell. VN Mail is a fork of OpenWren; the code is public, and bug reports and fixes are welcome.
         </p>
-        <Button className="mt-3" onClick={() => void backend.openLink(SPONSOR_PAGE)}>
-          <IconHeart size={16} className="text-danger" /> Sponsor on GitHub
+        <Button className="mt-3" onClick={() => void backend.openLink(REPOSITORY)}>
+          <IconHeart size={16} className="text-danger" /> View on GitHub
         </Button>
         <p className="mt-4 text-[13px] text-ink2">
-          Not able to sponsor? A star on{" "}
+          A star on{" "}
           <button type="button" className="text-brand underline" onClick={() => void backend.openLink(REPOSITORY)}>
             GitHub
           </button>{" "}
-          helps others find OpenWren, and costs nothing.
+          helps others find VN Mail, and costs nothing.
         </p>
       </div>
     </div>

@@ -9,11 +9,11 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use openwren_lib::db::{self, Db};
-use openwren_lib::model::{AccountSettings, SearchFilters, Security, ServerSettings};
-use openwren_lib::sample_data::{self, Rng};
-use openwren_lib::sync::{self, Silent};
-use openwren_lib::{imap, store};
+use vnmail_lib::db::{self, Db};
+use vnmail_lib::model::{AccountSettings, SearchFilters, Security, ServerSettings};
+use vnmail_lib::sample_data::{self, Rng};
+use vnmail_lib::sync::{self, Silent};
+use vnmail_lib::{imap, store};
 
 const KEY: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
@@ -40,7 +40,7 @@ fn row(what: &str, (median, p95): (Duration, Duration)) {
 }
 
 fn engine(count: usize) {
-    let path = std::env::temp_dir().join(format!("openwren-bench-{count}-{}.db", std::process::id()));
+    let path = std::env::temp_dir().join(format!("vnmail-bench-{count}-{}.db", std::process::id()));
     for suffix in ["", "-wal", "-shm"] {
         let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
     }
@@ -99,7 +99,7 @@ fn sync_speed(target: &str) {
     let (host, port) = target.split_once(':').expect("OPENWREN_TEST_IMAP must be host:port");
     let user = std::env::var("OPENWREN_BENCH_USER").unwrap_or_else(|_| "bench@work.test".into());
     let settings = ServerSettings { host: host.into(), port: port.parse().unwrap(), security: Security::None, username: user.clone() };
-    let path = std::env::temp_dir().join(format!("openwren-bench-sync-{}.db", std::process::id()));
+    let path = std::env::temp_dir().join(format!("vnmail-bench-sync-{}.db", std::process::id()));
     let _ = std::fs::remove_file(&path);
     let db: Db = Arc::new(Mutex::new(store::open(&path, KEY).unwrap()));
     let account = db::insert_account(&db::lock(&db), &user, "Bench", "imap", &AccountSettings { imap: Some(settings.clone()), ..Default::default() }).unwrap();

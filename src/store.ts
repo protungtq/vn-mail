@@ -91,9 +91,9 @@ interface State {
   signatureDefaults: SignatureDefaults[];
   /** The desktop's own font, read once at start. */
   systemFont: { family: string; light: boolean };
-  /** A newer version of OpenWren, when the daily check found one. */
+  /** A newer version of VN Mail, when the daily check found one. */
   update: UpdateAvailable | null;
-  /** What changed, shown once after OpenWren was updated, until it is closed. */
+  /** What changed, shown once after VN Mail was updated, until it is closed. */
   whatsNew: WhatsNew | null;
   /** User preferences, as stored (all strings). */
   settings: Record<string, string>;
@@ -778,7 +778,7 @@ export const useStore = create<State>((set, get) => {
               .then((id) => set({ draft: { ...again, id } }));
           }),
       };
-      get().showToast(sendAt ? `Scheduled for ${longTime(new Date(sendAt * 1000), new Date())}. OpenWren must be running then.` : delay > 0 ? `Sending in ${delay} seconds` : "Sending…", undo, sendAt || delay <= 0 ? undefined : at * 1000);
+      get().showToast(sendAt ? `Scheduled for ${longTime(new Date(sendAt * 1000), new Date())}. VN Mail must be running then.` : delay > 0 ? `Sending in ${delay} seconds` : "Sending…", undo, sendAt || delay <= 0 ? undefined : at * 1000);
     },
 
     showSource: (sourceOf) => set({ sourceOf }),

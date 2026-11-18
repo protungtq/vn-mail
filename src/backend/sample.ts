@@ -87,7 +87,7 @@ function make(s: Seed): MessageDetail {
     focused: s.focused ?? true,
     categories: [],
     snoozedUntil: null,
-    messageIdHeader: `sample-${nextId}@openwren.test`,
+    messageIdHeader: `sample-${nextId}@vnmail.test`,
     references: null,
     toAddresses: "Katy Reid <katy@work.com>",
     ccAddresses: "",
@@ -132,7 +132,7 @@ const messages: MessageDetail[] = [
   make({
     from: "GitHub",
     address: "notifications@github.com",
-    subject: "[openwren] Pull request merged: faster folder lists",
+    subject: "[vnmail] Pull request merged: faster folder lists",
     body: ["Your pull request was merged into main.", "All checks have passed."],
     html: '<p>Your pull request <b>Faster folder lists</b> was merged into <code>main</code>.</p><p>All checks have passed. <a href="https://github.com/">View it on GitHub</a></p>',
     date: ago(0, 11, 42),

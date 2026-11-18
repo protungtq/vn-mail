@@ -2,9 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    // `openwren --version` answers without opening a window, so a package can be checked on a server.
+    // `vnmail --version` answers without opening a window, so a package can be checked on a server.
     if std::env::args().any(|arg| arg == "--version" || arg == "-V") {
-        println!("openwren {}", env!("CARGO_PKG_VERSION"));
+        println!("vnmail {}", env!("CARGO_PKG_VERSION"));
         return;
     }
     // On Wayland, WebKitGTK's accelerated drawing path keeps the wrong scale when screens
@@ -15,6 +15,6 @@ fn main() {
         // Nothing else is running yet, so changing the environment is safe.
         unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
     }
-    openwren_lib::mark_start();
-    openwren_lib::run()
+    vnmail_lib::mark_start();
+    vnmail_lib::run()
 }

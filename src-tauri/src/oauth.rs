@@ -101,11 +101,11 @@ pub async fn wait_for_code(listener: TcpListener, expected_state: &str, timeout:
                 _ => None, // favicon and other stray requests
             };
             let page = match &outcome {
-                Some(Ok(_)) => "Signed in. You can close this tab and return to OpenWren.",
-                Some(Err(_)) => "Sign-in failed. Return to OpenWren for details.",
+                Some(Ok(_)) => "Signed in. You can close this tab and return to VN Mail.",
+                Some(Err(_)) => "Sign-in failed. Return to VN Mail for details.",
                 None => "",
             };
-            let body = format!("<!doctype html><meta charset=utf-8><title>OpenWren</title><body style=\"font:16px system-ui;margin:3em\">{page}</body>");
+            let body = format!("<!doctype html><meta charset=utf-8><title>VN Mail</title><body style=\"font:16px system-ui;margin:3em\">{page}</body>");
             let response = format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
             let _ = stream.get_mut().write_all(response.as_bytes()).await;
             if let Some(outcome) = outcome {

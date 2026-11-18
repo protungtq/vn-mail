@@ -201,8 +201,8 @@ mod tests {
             bcc: "boss@contoso.example".into(),
             subject: "Re: Tilbud på tryk".into(),
             html: "<p>Hi <b>Mona</b>,</p><p>Looks good.</p>".into(),
-            in_reply_to: Some("abc@openwren.test".into()),
-            references: Some("root@openwren.test abc@openwren.test".into()),
+            in_reply_to: Some("abc@vnmail.test".into()),
+            references: Some("root@vnmail.test abc@vnmail.test".into()),
             files: vec![FilePart { name: "notes.txt".into(), mime_type: "text/plain".into(), data: b"hello".to_vec() }],
             ..Default::default()
         }
@@ -218,7 +218,7 @@ mod tests {
         assert_eq!(header.subject, "Re: Tilbud på tryk");
         assert_eq!(header.from_name, "Katy Reid");
         assert_eq!(header.to_list, "Mona Kane; elvia@contoso.example");
-        assert_eq!(header.thread_key().as_deref(), Some("root@openwren.test"));
+        assert_eq!(header.thread_key().as_deref(), Some("root@vnmail.test"));
         let body = parse::parse_body(&built.raw);
         assert!(body.html.unwrap().contains("<b>Mona</b>"));
         assert!(body.plain.contains("Looks good."));

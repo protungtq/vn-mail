@@ -10,12 +10,11 @@ import {
   IconMail,
   IconPaperclip,
   IconShieldCheck,
-  IconUserHeart,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import logo from "../../src-tauri/icons/128x128@2x.png";
 import { backend } from "../backend";
-import { PRIVACY_PAGE, REPOSITORY, SPONSOR_PAGE } from "../lib/links";
+import { REPOSITORY } from "../lib/links";
 import { TEXT_SIZES } from "../lib/font";
 import { useStore } from "../store";
 import { preferAccountKind } from "./AddAccount";
@@ -107,15 +106,12 @@ function Preview() {
   );
 }
 
-/** First-run welcome: what OpenWren is, add an account, pick the look, start. */
+/** First-run welcome: what VN Mail is, add an account, pick the look, start. */
 export function Onboarding() {
   const accounts = useStore((s) => s.accounts);
   const settings = useStore((s) => s.settings);
   const { setSetting, setDialog, setWelcome } = useStore.getState();
-  // Nothing is chosen in advance: the count is sent only after "Count this copy".
-  const counted = settings.usage_stats === "on" ? true : settings.usage_stats === "off" ? false : null;
   const [step, setStep] = useState(0);
-  const [sentShown, setSentShown] = useState(false);
   const had = useState(accounts.length)[0];
 
   // Adding an account in the dialog moves the welcome on by itself.
@@ -134,11 +130,11 @@ export function Onboarding() {
   const card = "flex w-full items-center gap-4 rounded-2xl border border-edge px-5 py-4 text-left hover:border-line hover:bg-hover";
 
   return (
-    <div className="absolute inset-0 z-[5] flex bg-card" role="dialog" aria-modal="true" aria-label="Welcome to OpenWren">
+    <div className="absolute inset-0 z-[5] flex bg-card" role="dialog" aria-modal="true" aria-label="Welcome to VN Mail">
       <div className="flex min-w-0 flex-1 flex-col px-14 py-10">
         <div className="flex items-center gap-2.5">
           <img src={logo} alt="" className="size-8" />
-          <span className="text-lg text-ink">OpenWren</span>
+          <span className="text-lg text-ink">VN Mail</span>
           <button type="button" onClick={finish} className="ml-auto rounded-lg px-3 py-1.5 text-ink3 hover:bg-hover hover:text-ink">
             Skip
           </button>
@@ -150,7 +146,7 @@ export function Onboarding() {
             {step === 0 && (
               <>
                 <h1 className="text-[34px] leading-tight text-ink">Mail that stays yours</h1>
-                <p className="mt-3 text-[17px] text-ink2">OpenWren is an open-source mail app for Gmail and any other mail account. It keeps your mail on this computer and tells no one what you read.</p>
+                <p className="mt-3 text-[17px] text-ink2">VN Mail is an open-source mail app for Gmail and any other mail account. It keeps your mail on this computer and tells no one what you read.</p>
                 <div className="mt-8 flex flex-col gap-5">
                   <Point icon={<IconLock size={20} />} title="Private by design" text="Your mail is stored encrypted on this computer. No tracking, no ads." />
                   <Point icon={<IconShieldCheck size={20} />} title="Watches your back" text="Trackers are removed and suspicious messages are flagged before you click." />
@@ -176,7 +172,7 @@ export function Onboarding() {
             {step === 1 && (
               <>
                 <h1 className="text-[30px] leading-tight text-ink">Add your mail account</h1>
-                <p className="mt-3 text-ink2">Your password or sign-in is kept in your system's password store, never in OpenWren's files.</p>
+                <p className="mt-3 text-ink2">Your password or sign-in is kept in your system's password store, never in VN Mail's files.</p>
                 {accounts.length > 0 && (
                   <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-soft px-3 py-1 text-brand">
                     <IconCheck size={16} /> {accounts.length === 1 ? accounts[0].address : `${accounts.length} accounts`} added
@@ -233,66 +229,6 @@ export function Onboarding() {
                     ]}
                   />
                 </div>
-                <div className="mt-7 rounded-2xl border border-edge px-4 py-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="flex size-10 flex-none items-center justify-center rounded-full bg-soft text-brand">
-                      <IconUserHeart size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <div id="usage-count" className="text-ink">
-                        Let me know you're here
-                      </div>
-                      <div className="mt-1 text-[13px] text-ink2">
-                        OpenWren is free, and I build it in my spare time. I can't see who uses it, by design. If you say yes, your copy sends one anonymous signal a day, and I see a number go up by one. That number is what keeps me maintaining it.
-                      </div>
-                      <div className="mt-1.5 text-[13px] text-ink3">No name, no address, no mail. Vincent, maintainer</div>
-                    </div>
-                  </div>
-                  <div className="mt-3.5 flex flex-wrap items-center gap-2" role="radiogroup" aria-labelledby="usage-count">
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={counted === true}
-                      onClick={() => void setSetting("usage_stats", "on")}
-                      className={`h-9 rounded-lg border px-3.5 text-[14px] ${counted === true ? "border-brand bg-brand/10 text-brand" : "border-edge text-ink hover:bg-hover"}`}
-                    >
-                      Count me in
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={counted === false}
-                      onClick={() => void setSetting("usage_stats", "off")}
-                      className={`h-9 rounded-lg border px-3.5 text-[14px] ${counted === false ? "border-brand bg-brand/10 text-brand" : "border-edge text-ink hover:bg-hover"}`}
-                    >
-                      No, thanks
-                    </button>
-                    <button type="button" aria-expanded={sentShown} aria-controls="usage-sent" onClick={() => setSentShown(!sentShown)} className="ml-auto rounded-md px-1.5 py-1 text-[13px] text-brand hover:underline">
-                      {sentShown ? "Hide what is sent" : "See what is sent"}
-                    </button>
-                  </div>
-                  {sentShown && (
-                    <div id="usage-sent" className="mt-3 rounded-xl bg-canvas px-3.5 py-3">
-                      <div className="text-xs text-ink3">Everything the request contains</div>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {["The app version", "The package type, such as deb", "The system, such as ubuntu-24", "The processor type", "The month of installation", "If it is the first request of the day, week or month, or ever"].map((fact) => (
-                          <span key={fact} className="rounded-full border border-edge bg-card px-2.5 py-0.5 text-xs text-ink2">
-                            {fact}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="mt-2.5 flex items-center gap-1.5 text-xs text-ink3">
-                        <IconLock size={14} className="flex-none" />
-                        <span>
-                          Never your name, address, mail or any identifier.{" "}
-                          <button type="button" className="text-brand hover:underline" onClick={() => void backend.openLink(PRIVACY_PAGE)}>
-                            Privacy page
-                          </button>
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </>
             )}
 
@@ -322,16 +258,16 @@ export function Onboarding() {
                     <IconHeart size={20} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-ink">OpenWren is free. Sponsors keep it that way.</div>
+                    <div className="text-ink">VN Mail is free and open source.</div>
                     <div className="mt-1 text-[13px] text-ink2">
-                      No ads and no data to sell. If OpenWren becomes your daily mail app, a few dollars a month pays for the time to fix bugs and for signed installers.
+                      No ads and no data to sell. VN Mail is a fork of OpenWren; the code is public, and bug reports and fixes are welcome.
                     </div>
                     <button
                       type="button"
-                      onClick={() => void backend.openLink(SPONSOR_PAGE)}
+                      onClick={() => void backend.openLink(REPOSITORY)}
                       className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg border border-edge px-3.5 text-[14px] text-ink hover:bg-hover"
                     >
-                      <IconHeart size={16} className="text-danger" /> Sponsor on GitHub
+                      <IconHeart size={16} className="text-danger" /> View on GitHub
                     </button>
                   </div>
                 </div>
@@ -362,16 +298,9 @@ export function Onboarding() {
               </button>
             ))}
           {step === 2 && (
-            <>
-              <Next onClick={() => setStep(3)} disabled={counted === null}>
-                Continue <IconArrowRight size={18} />
-              </Next>
-              {counted === null && (
-                <span className="whitespace-nowrap text-[13px] text-ink3" role="status">
-                  Answer above to continue
-                </span>
-              )}
-            </>
+            <Next onClick={() => setStep(3)}>
+              Continue <IconArrowRight size={18} />
+            </Next>
           )}
           {step === 3 && <Next onClick={finish}>Open my inbox</Next>}
           <div className="ml-auto flex items-center gap-2" aria-label={`Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`}>

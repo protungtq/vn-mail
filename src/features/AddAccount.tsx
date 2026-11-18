@@ -63,7 +63,7 @@ function toSettings(server: Server, username: string): ServerSettings {
 const validPort = (s: Server) => Number.isInteger(Number(s.port)) && Number(s.port) >= 1 && Number(s.port) <= 65535;
 
 /**
- * What was typed, kept while OpenWren runs so that closing the dialog after a
+ * What was typed, kept while VN Mail runs so that closing the dialog after a
  * failed attempt does not lose it. Kept in memory only, and forgotten once the account is added.
  */
 let remembered: { kind: Kind; address: string; name: string; password: string; incoming: Server; outgoing: Server } | null = null;
@@ -214,7 +214,7 @@ export function AddAccount() {
               <ol className="list-decimal space-y-1 pl-5">
                 <li>Turn on 2-step verification in your Google account, if it is not on yet.</li>
                 <li>
-                  Create an app password named "OpenWren".{" "}
+                  Create an app password named "VN Mail".{" "}
                   <button type="button" className="text-brand underline" onClick={() => void backend.openLink("https://myaccount.google.com/apppasswords")}>
                     Open Google's app passwords page
                   </button>
@@ -236,7 +236,7 @@ export function AddAccount() {
         )}
         {oauth && (
           <p className="mt-3 text-[13px] text-ink2">
-            Your browser opens so you can sign in with Google. OpenWren never sees your password. This way needs your own Google client ID
+            Your browser opens so you can sign in with Google. VN Mail never sees your password. This way needs your own Google client ID
             {hasGoogleClient ? "." : ", entered first in "}
             {!hasGoogleClient && (
               <button type="button" className="text-brand underline" onClick={() => setDialog("settings", "accounts")}>
@@ -255,7 +255,7 @@ export function AddAccount() {
             <ServerRow id="aa-out" title="Outgoing server (SMTP)" optional protocol="smtp" value={outgoing} onChange={setOutgoing} />
             {insecure && <p className="mt-2 text-xs text-danger">Without encryption your password and mail travel unprotected. Use this only for a test server on your own computer.</p>}
             <p className="mt-3 text-xs text-ink3">
-              The password is stored in your system's password store, not in OpenWren's files.
+              The password is stored in your system's password store, not in VN Mail's files.
             </p>
           </>
         )}

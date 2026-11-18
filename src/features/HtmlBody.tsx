@@ -72,7 +72,7 @@ export function HtmlBody({ html, note, sender, confirmed }: { html: string; note
     const fontUrl = new URL(font === "nunito" ? nunitoFile : interFile, window.location.href).href;
     const fontOrigin = new URL(fontUrl).origin;
     // Mail text uses the same font, weight and size as the rest of the window.
-    const family = font === "system" ? fontStack("system", systemFont.family) : '"OpenWren Sans", system-ui, sans-serif';
+    const family = font === "system" ? fontStack("system", systemFont.family) : '"VN Mail Sans", system-ui, sans-serif';
     const weight = font === "system" && systemFont.light ? 300 : 400;
     // Mail is always shown dark on white. In the light theme it sits straight on the page;
     // in the dark theme it becomes a white sheet, which needs its own margin.
@@ -83,7 +83,7 @@ export function HtmlBody({ html, note, sender, confirmed }: { html: string; note
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${img}; style-src 'unsafe-inline'; font-src ${fontOrigin}">
 <style>
   /* The app's own font, so mail text matches the rest of the window. It is the only thing the frame may load. */
-  @font-face { font-family: "OpenWren Sans"; src: url("${fontUrl}") format("woff2"); font-weight: 200 1000; }
+  @font-face { font-family: "VN Mail Sans"; src: url("${fontUrl}") format("woff2"); font-weight: 200 1000; }
   html, body { margin: 0; padding: 0; }
   body { font: ${weight} ${textSize}px/1.6 ${family}; color: #1f2328; background: #fff; padding: ${padding}; overflow-wrap: anywhere; }
   img { max-width: 100%; height: auto; }

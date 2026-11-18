@@ -1,5 +1,11 @@
 # Changelog
 
+> VN Mail is a fork of [OpenWren](https://github.com/VinceGHER/openwren)
+> (Apache-2.0). The entries below are OpenWren's history, kept as it was.
+> Fork changes so far: renamed to VN Mail (new name, icon and app
+> identifier); the update check and the anonymous usage count disabled,
+> since VN Mail has no server for them yet.
+
 ## 0.1.12
 
 - A `mailto:` link in a message opens OpenWren's own composer, filled with the recipient, copy, subject and text only. It used to go to the system mail program with all its parameters, and some programs attach local files when a link asks them to.

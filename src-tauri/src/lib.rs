@@ -31,7 +31,7 @@ use imap::Session;
 use model::*;
 use tauri_plugin_notification::NotificationExt;
 
-const KEYRING_SERVICE: &str = "OpenWren";
+const KEYRING_SERVICE: &str = "VN Mail";
 
 static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
 
@@ -51,7 +51,7 @@ fn mark_ready(app: AppHandle) {
         return;
     }
     if let Some(started) = STARTED.get() {
-        eprintln!("openwren-ready-ms {}", started.elapsed().as_millis());
+        eprintln!("vnmail-ready-ms {}", started.elapsed().as_millis());
     }
     if mode == "exit" {
         app.exit(0);
@@ -62,7 +62,7 @@ fn mark_ready(app: AppHandle) {
 const OLD_KEYRING_SERVICE: &str = "OpenLook";
 const OLD_DATA_DIR: &str = "org.openlook.app";
 const OLD_DATABASE: &str = "openlook.db";
-const DATABASE: &str = "openwren.db";
+const DATABASE: &str = "vnmail.db";
 
 /// Move the data folder of the app's earlier name into place, database included.
 fn adopt_old_data(dir: &std::path::Path) {
@@ -137,7 +137,7 @@ async fn load_password(address: String) -> Result<String> {
 /// The key of the encrypted database, kept in the system keyring.
 /// Made on first use; never recreated when a database already depends on it.
 pub fn database_key(database: &std::path::Path) -> std::result::Result<String, String> {
-    let keyring_error = |e: keyring::Error| format!("OpenWren could not use the system keyring, which holds the key of its mail database: {e}");
+    let keyring_error = |e: keyring::Error| format!("VN Mail could not use the system keyring, which holds the key of its mail database: {e}");
     adopt_old_secret("database-key");
     let entry = keyring::Entry::new(KEYRING_SERVICE, "database-key").map_err(keyring_error)?;
     match entry.get_password() {
@@ -432,7 +432,7 @@ fn save_draft(app: AppHandle, state: State<'_, AppState>, id: Option<i64>, accou
             let (address, _, _) = db::account_identity(&conn, account_id)?;
             let mut bytes = [0u8; 16];
             getrandom::fill(&mut bytes).map_err(|e| Error(format!("No random numbers available: {e}")))?;
-            format!("{}@{}", bytes.iter().map(|b| format!("{b:02x}")).collect::<String>(), address.rsplit('@').next().unwrap_or("openwren.local"))
+            format!("{}@{}", bytes.iter().map(|b| format!("{b:02x}")).collect::<String>(), address.rsplit('@').next().unwrap_or("vnmail.local"))
         }
     };
     let saved = db::save_draft(&conn, id, account_id, &content, &message_id, now())?;
@@ -548,7 +548,7 @@ async fn unsubscribe(app: AppHandle, state: State<'_, AppState>, id: i64) -> Res
             };
             let client = reqwest::Client::builder()
                 .timeout(Duration::from_secs(20))
-                .user_agent("OpenWren")
+                .user_agent("VN Mail")
                 .redirect(reqwest::redirect::Policy::none())
                 // A proxy would look the name up itself and undo the address check above.
                 .no_proxy()
@@ -1075,10 +1075,10 @@ fn show_window(app: &AppHandle) {
 /// The icon in the system tray, with a small menu.
 fn add_tray_icon(app: &tauri::App) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem};
-    let open = MenuItem::with_id(app, "open", "Open OpenWren", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Open VN Mail", true, None::<&str>)?;
     let sync = MenuItem::with_id(app, "sync", "Sync now", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let mut tray = tauri::tray::TrayIconBuilder::with_id("main").tooltip("OpenWren").menu(&Menu::with_items(app, &[&open, &sync, &quit])?);
+    let mut tray = tauri::tray::TrayIconBuilder::with_id("main").tooltip("VN Mail").menu(&Menu::with_items(app, &[&open, &sync, &quit])?);
     // A plain envelope with a clear outline: the app icon's pale background turns into a white blob at tray size.
     match tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png")) {
         Ok(icon) => tray = tray.icon(icon),
@@ -1120,7 +1120,7 @@ async fn google_sign_in(app: AppHandle, state: State<'_, AppState>, address: Str
     app.opener().open_url(url, None::<&str>).map_err(|e| Error(format!("Could not open the browser: {e}")))?;
     let code = oauth::wait_for_code(listener, &csrf, Duration::from_secs(300)).await?;
     let tokens = oauth::exchange_code(&config, &code, &verifier, &redirect).await?;
-    let refresh = tokens.refresh_token.ok_or(Error("Google did not return a refresh token. Remove OpenWren under \"Third-party access\" in your Google account and try again.".into()))?;
+    let refresh = tokens.refresh_token.ok_or(Error("Google did not return a refresh token. Remove VN Mail under \"Third-party access\" in your Google account and try again.".into()))?;
 
     let server = |host: &str, port: u16| ServerSettings { host: host.into(), port, security: Security::Tls, username: address.clone() };
     let imap = server("imap.gmail.com", 993);
@@ -1266,13 +1266,13 @@ fn open_link(app: AppHandle, url: String) -> Result<()> {
     app.opener().open_url(parsed.as_str(), None::<&str>).map_err(|e| Error(format!("Could not open the browser: {e}")))
 }
 
-/// Only web addresses go to the browser. A `mailto:` link opens OpenWren's own composer
+/// Only web addresses go to the browser. A `mailto:` link opens VN Mail's own composer
 /// instead (the interface does that), because some system mail programs act on link
 /// parameters such as `attach=` and would attach local files the sender named.
 fn web_link(url: &str) -> Result<reqwest::Url> {
     let parsed = reqwest::Url::parse(url.trim()).map_err(|_| Error("That link is not a valid address.".into()))?;
     if !matches!(parsed.scheme(), "http" | "https") {
-        return Err(Error(format!("OpenWren does not open \"{}\" links.", parsed.scheme())));
+        return Err(Error(format!("VN Mail does not open \"{}\" links.", parsed.scheme())));
     }
     Ok(parsed)
 }
@@ -1290,7 +1290,7 @@ async fn message_source(state: State<'_, AppState>, id: i64) -> Result<String> {
     Ok(text)
 }
 
-/// File types OpenWren hands to another program: documents, pictures, sound, video
+/// File types VN Mail hands to another program: documents, pictures, sound, video
 /// and archives. The name and content of an attachment are chosen by the sender, so
 /// everything else (programs, scripts, web pages, installers, files without a type)
 /// can only be saved, never opened from here. Old Office formats (`.doc`, `.xls`, `.ppt`)
@@ -1428,7 +1428,7 @@ async fn check_update(app: AppHandle) -> Result<Option<updates::Available>> {
 async fn install_update(app: AppHandle) -> Result<()> {
     use tauri_plugin_updater::UpdaterExt;
     if updates::how(&stats::package_kind()) != "install" {
-        return Err(Error("This copy of OpenWren is updated by your system, not by the app.".into()));
+        return Err(Error("This copy of VN Mail is updated by your system, not by the app.".into()));
     }
     let failed = |e: tauri_plugin_updater::Error| Error(format!("The update could not be installed: {e}"));
     let update = app.updater().map_err(failed)?.check().await.map_err(failed)?.ok_or(Error("You already have the newest version.".into()))?;
@@ -1457,7 +1457,7 @@ fn remove_old_opened_attachments(app: &AppHandle) {
 }
 
 /// Open one attachment in the program this computer uses for its type.
-/// The file is written to a private temporary folder that is emptied when OpenWren starts.
+/// The file is written to a private temporary folder that is emptied when VN Mail starts.
 #[tauri::command]
 async fn open_attachment(app: AppHandle, state: State<'_, AppState>, id: i64, index: usize, name: String) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
@@ -1465,7 +1465,7 @@ async fn open_attachment(app: AppHandle, state: State<'_, AppState>, id: i64, in
     let name = std::path::Path::new(&name).file_name().and_then(|n| n.to_str()).unwrap_or("attachment").to_string();
     let extension = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
     if !OPENABLE.contains(&extension.as_str()) {
-        return Err(Error(format!("For your safety OpenWren does not open this kind of file from mail. Save {name} first if you trust the sender.")));
+        return Err(Error(format!("For your safety VN Mail does not open this kind of file from mail. Save {name} first if you trust the sender.")));
     }
     let raw = fetch_raw(&state, id).await?;
     let data = parse::attachment_bytes(&raw, index).ok_or(Error("That attachment could not be read.".into()))?;
@@ -1535,7 +1535,7 @@ mod tests {
 
     #[test]
     fn opened_attachments_are_private_from_the_start() {
-        let base = std::env::temp_dir().join(format!("openwren-test-{}", std::process::id()));
+        let base = std::env::temp_dir().join(format!("vnmail-test-{}", std::process::id()));
         let dir = base.join("opened-attachments").join("1-0");
         let path = dir.join("letter.pdf");
         super::write_private(&dir, &path, b"secret").unwrap();
@@ -1588,7 +1588,7 @@ pub fn run() {
     #[cfg(not(target_os = "linux"))]
     let builder = builder.plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![autostart::HIDDEN])));
     builder
-        // Starting OpenWren again shows the window of the one already running.
+        // Starting VN Mail again shows the window of the one already running.
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show_window(app)))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -1641,7 +1641,7 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the window keeps OpenWren in the tray, so new mail is still announced.
+            // Closing the window keeps VN Mail in the tray, so new mail is still announced.
             let tauri::WindowEvent::CloseRequested { api, .. } = event else { return };
             let app = window.app_handle();
             let state = app.state::<AppState>();
@@ -1654,7 +1654,7 @@ pub fn run() {
             let _ = window.hide();
             if db::get_setting(&conn, "tray_hint_shown").ok().flatten().is_none() {
                 let _ = db::set_setting(&conn, "tray_hint_shown", "yes");
-                let _ = app.notification().builder().title("OpenWren is still running").body("It stays in the tray to tell you about new mail. Use the tray icon to open it or quit.").show();
+                let _ = app.notification().builder().title("VN Mail is still running").body("It stays in the tray to tell you about new mail. Use the tray icon to open it or quit.").show();
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -1714,7 +1714,7 @@ pub fn run() {
             save_message
         ])
         .build(tauri::generate_context!())
-        .expect("error while starting OpenWren")
+        .expect("error while starting VN Mail")
         .run(|app, event| {
             // Attachments opened during this session were written out unencrypted: remove them on the way out.
             if let tauri::RunEvent::Exit = event {

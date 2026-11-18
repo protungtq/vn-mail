@@ -2,8 +2,8 @@
 //! Needs `sh tests/mail-server.sh`; run with
 //! `OPENWREN_TEST_IMAP=127.0.0.1:3143 OPENWREN_TEST_SMTP=127.0.0.1:3025 cargo test --test smtp_send`.
 
-use openwren_lib::model::{Security, ServerSettings};
-use openwren_lib::{imap, parse, smtp};
+use vnmail_lib::model::{Security, ServerSettings};
+use vnmail_lib::{imap, parse, smtp};
 
 fn server(var: &str, user: &str) -> Option<ServerSettings> {
     let target = std::env::var(var).ok()?;
@@ -28,7 +28,7 @@ async fn a_sent_message_arrives_with_its_attachment() {
         cc: String::new(),
         bcc: String::new(),
         subject: subject.clone(),
-        html: "<p>Hello from <b>OpenWren</b>.</p><p>Kind regards,<br>Katy</p>".into(),
+        html: "<p>Hello from <b>VN Mail</b>.</p><p>Kind regards,<br>Katy</p>".into(),
         in_reply_to: None,
         references: None,
         files: vec![smtp::FilePart { name: "notes.txt".into(), mime_type: "text/plain".into(), data: b"attached text".to_vec() }],
@@ -49,7 +49,7 @@ async fn a_sent_message_arrives_with_its_attachment() {
     assert_eq!(header.from_name, "Katy Reid");
     assert_eq!(header.subject, subject);
     let body = parse::parse_body(raw);
-    assert!(body.html.unwrap().contains("<b>OpenWren</b>"));
+    assert!(body.html.unwrap().contains("<b>VN Mail</b>"));
     assert!(body.plain.contains("Kind regards"));
     assert_eq!(body.attachments.len(), 1);
     assert_eq!(body.attachments[0].name, "notes.txt");

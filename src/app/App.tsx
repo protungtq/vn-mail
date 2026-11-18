@@ -146,9 +146,9 @@ function WhatsNewDialog() {
       <div role="dialog" aria-modal="true" aria-labelledby="whats-new-title" className="flex max-h-full w-[520px] max-w-full flex-col overflow-hidden rounded-[14px] border border-edge bg-card shadow-xl">
         <div className="flex-none px-6 pt-5">
           <h2 id="whats-new-title" className="text-[17px] font-semibold text-ink">
-            What is new in OpenWren {news.version}
+            What is new in VN Mail {news.version}
           </h2>
-          <p className="mt-0.5 text-ink3">OpenWren was updated.</p>
+          <p className="mt-0.5 text-ink3">VN Mail was updated.</p>
         </div>
         <ul className="selectable min-h-0 flex-1 list-disc space-y-1.5 overflow-y-auto py-4 pr-6 pl-11 text-ink2">
           {news.changes.map((change) => (

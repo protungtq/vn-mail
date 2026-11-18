@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest something OpenWren should do
+about: Suggest something VN Mail should do
 labels: enhancement
 ---
 

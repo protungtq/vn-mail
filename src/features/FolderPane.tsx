@@ -147,7 +147,7 @@ function UpdateNotice() {
     <button
       type="button"
       onClick={() => setDialog("settings", "about")}
-      title={`OpenWren ${update.version} is available`}
+      title={`VN Mail ${update.version} is available`}
       className="mt-1 flex w-full flex-none items-center gap-2 rounded-lg bg-brand/10 px-2.5 py-2 text-left text-xs font-medium text-brand hover:bg-brand/15"
     >
       <IconArrowUpCircle size={16} stroke={1.8} className="flex-none" />
@@ -264,7 +264,7 @@ export function FolderPane({ width }: { width: number }) {
     <nav className="flex flex-none flex-col bg-card px-2.5 pt-3.5 pb-2" style={{ width }} aria-label="Folders">
       <div className="mb-3 flex flex-none items-center gap-2 pr-0.5 pl-2">
         <img src={logo} alt="" className="size-[22px]" />
-        <span className="truncate text-[17px] text-ink">OpenWren</span>
+        <span className="truncate text-[17px] text-ink">VN Mail</span>
         <RefreshButton />
         <button type="button" aria-label="Settings" title="Settings" onClick={() => setDialog("settings")} className="rounded-lg p-1.5 text-ink3 hover:bg-hover hover:text-ink">
           <IconSettings size={18} stroke={1.6} />

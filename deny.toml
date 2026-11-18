@@ -1,5 +1,5 @@
 # Checked by `cargo deny --manifest-path src-tauri/Cargo.toml check`.
-# OpenWren is Apache-2.0. Every dependency must be under a licence that allows
+# VN Mail is Apache-2.0. Every dependency must be under a licence that allows
 # shipping it that way: no GPL, AGPL, LGPL or other strong copyleft.
 
 [licenses]
@@ -31,6 +31,6 @@ yanked = "warn"
 unmaintained = "workspace"
 # Each entry says why it does not apply or cannot be fixed yet, and when to look again.
 ignore = [
-  { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained, with no security issue. async-imap depends on it, so it stays in the build even if OpenWren's own date code moved to jiff or time. Revisit when async-imap drops it." },
-  { id = "RUSTSEC-2026-0459", reason = "SQLite before 3.54 can return stale memory when it opens a database and -wal file crafted by someone else. OpenWren opens only its own database in the user's data folder, so the attacker would already need to write the user's files. The fixed libsqlite3-sys 0.39 still builds SQLCipher from sqlcipher-src 419.0.6, which bundles SQLite 3.53.4 (per the advisory). Revisit when a SQLCipher build with SQLite 3.54 is available." },
+  { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained, with no security issue. async-imap depends on it, so it stays in the build even if VN Mail's own date code moved to jiff or time. Revisit when async-imap drops it." },
+  { id = "RUSTSEC-2026-0459", reason = "SQLite before 3.54 can return stale memory when it opens a database and -wal file crafted by someone else. VN Mail opens only its own database in the user's data folder, so the attacker would already need to write the user's files. The fixed libsqlite3-sys 0.39 still builds SQLCipher from sqlcipher-src 419.0.6, which bundles SQLite 3.53.4 (per the advisory). Revisit when a SQLCipher build with SQLite 3.54 is available." },
 ]
