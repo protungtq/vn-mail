@@ -1,21 +1,24 @@
-//! Knowing when a newer OpenWren exists, and installing it where the app can.
+//! Knowing when a newer VN Mail exists, and installing it where the app can.
 //!
-//! Each release publishes one small public file, `latest.json`, with the newest
-//! version. The app downloads it at most a few times a day. The request carries
-//! nothing about the user: no identifier, no version, no settings.
+//! Each release would publish one small public file, `latest.json`, with the
+//! newest version. VN Mail has no update server yet, so `check` always answers
+//! "none" and the app never contacts one. The machinery below (version
+//! comparison, the manifest format, the installer) is kept so updates can be
+//! switched on later by pointing MANIFEST at a server and adding a signing key
+//! to tauri.conf.json.
 //!
-//! What happens next depends on how OpenWren was installed:
+//! What happens next depends on how VN Mail was installed:
 //! - apt or dnf: the system's own updates install it; the app only says so.
 //! - AppImage, Windows, macOS: the app can download and install the update itself.
-//!   The update must carry a signature made with the OpenWren update key, whose
+//!   The update must carry a signature made with the update key, whose
 //!   public half is built into the app (tauri.conf.json), or it is refused.
 //! - anything else (run from a build folder): a link to the download page.
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
-pub const MANIFEST: &str = "https://packages.openwren.app/latest.json";
+pub const MANIFEST: &str = "https://so1.asia/vn-mail/latest.json";
 
 /// What the interface shows when a newer version exists.
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -31,6 +34,7 @@ pub struct Available {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct Manifest {
     version: String,
     #[serde(default)]
@@ -59,6 +63,8 @@ pub fn how(package: &str) -> &'static str {
 }
 
 /// Read the version file. The text comes from the internet, so it is cut to what is shown.
+/// Only used by tests while the update check is stubbed.
+#[allow(dead_code)]
 fn read(body: &str, current: &str, package: &str) -> Option<Available> {
     let manifest: Manifest = serde_json::from_str(body).ok()?;
     if !newer(&manifest.version, current) {
@@ -69,21 +75,11 @@ fn read(body: &str, current: &str, package: &str) -> Option<Available> {
 }
 
 /// Ask whether a newer version exists. None when this one is current.
-pub async fn check(current: &str) -> Result<Option<Available>> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .user_agent("OpenWren")
-        .redirect(reqwest::redirect::Policy::none())
-        .build()?;
-    let response = client.get(MANIFEST).send().await?;
-    if !response.status().is_success() {
-        return Err(Error(format!("The update check answered {}.", response.status())));
-    }
-    let body = response.text().await?;
-    if body.len() > 64 * 1024 {
-        return Err(Error("The update check returned too much.".into()));
-    }
-    Ok(read(&body, current, &crate::stats::package_kind()))
+///
+/// VN Mail has no update server yet, so the answer is always none and nothing
+/// is fetched. Point MANIFEST at a server to switch the check on again.
+pub async fn check(_current: &str) -> Result<Option<Available>> {
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -111,43 +107,10 @@ mod tests {
         assert_eq!(how("other"), "download");
     }
 
-    /// Against the real server: `cargo test --lib updates -- --ignored`.
+    /// No update server yet: the check answers "none" without touching the network.
     #[tokio::test]
-    #[ignore]
-    async fn the_published_version_file_is_readable() {
-        // The app chooses its encryption provider when it starts (lib.rs); a test must do the same.
-        let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
-        let found = check("0.0.1").await.unwrap().expect("a version newer than 0.0.1 is published");
-        assert!(newer(&found.version, "0.0.1"));
-    }
-
-    /// Against the real server: every update file named in latest.json must carry a
-    /// signature that the key built into the app accepts, exactly as the updater checks
-    /// before installing. Run after a release: `cargo test --lib updates -- --ignored`.
-    #[tokio::test]
-    #[ignore]
-    async fn published_updates_are_signed_with_the_key_in_the_app() {
-        use base64::Engine;
-        let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
-        let text = |encoded: &str| String::from_utf8(base64::engine::general_purpose::STANDARD.decode(encoded.trim()).unwrap()).unwrap();
-        let config: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
-        let key = minisign_verify::PublicKey::decode(&text(config["plugins"]["updater"]["pubkey"].as_str().unwrap())).unwrap();
-
-        let client = reqwest::Client::new();
-        let manifest: serde_json::Value = client.get(MANIFEST).send().await.unwrap().json().await.unwrap();
-        let mut checked = std::collections::BTreeSet::new();
-        for (platform, entry) in manifest["platforms"].as_object().unwrap() {
-            let url = entry["url"].as_str().unwrap();
-            assert!(url.starts_with("https://packages.openwren.app/releases/"), "{platform}: {url}");
-            if !checked.insert(url.to_string()) {
-                continue; // the macOS file serves both processors
-            }
-            let file = client.get(url).send().await.unwrap().error_for_status().unwrap().bytes().await.unwrap();
-            let signature = minisign_verify::Signature::decode(&text(entry["signature"].as_str().unwrap())).unwrap();
-            key.verify(&file, &signature, true).unwrap_or_else(|e| panic!("{platform}: {url} is not signed with the update key: {e}"));
-            println!("verified {platform}: {} ({} bytes)", url.rsplit('/').next().unwrap(), file.len());
-        }
-        assert_eq!(checked.len(), 3, "AppImage, Windows installer, macOS archive");
+    async fn the_update_check_answers_none_without_a_server() {
+        assert!(check("0.0.1").await.unwrap().is_none());
     }
 
     #[test]

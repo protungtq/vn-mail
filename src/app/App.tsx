@@ -12,6 +12,7 @@ import { fontChoice, fontStack } from "../lib/font";
 import { useStore } from "../store";
 import { isMac, mod } from "../lib/keys";
 import { REPOSITORY } from "../lib/links";
+import { useLang, useT } from "../lib/useT";
 import { backend } from "../backend";
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -66,6 +67,7 @@ function onShortcut(e: KeyboardEvent) {
   const key = e.key.toLowerCase();
   if (mod(e) && key === "n") return e.preventDefault(), s.compose();
   if (typing(e.target) || s.draft) return;
+  if (mod(e) && key === "a") return e.preventDefault(), s.selectAll();
   const open = s.detail;
   const ids = s.targets();
   if (mod(e) && e.shiftKey && key === "r") return e.preventDefault(), s.reply("reply-all");
@@ -93,6 +95,7 @@ function useSecondsLeft(at: number | undefined): number | null {
 }
 
 function ToastBar() {
+  const t = useT();
   const toast = useStore((s) => s.toast);
   const dismiss = useStore((s) => s.dismissToast);
   const left = useSecondsLeft(toast?.sendsAt);
@@ -103,7 +106,7 @@ function ToastBar() {
     return () => clearTimeout(timer);
   }, [left, dismiss]);
   if (!toast) return null;
-  const text = left === null ? toast.text : left === 0 ? "Sending…" : `Sending in ${left} ${left === 1 ? "second" : "seconds"}`;
+  const text = left === null ? toast.text : left === 0 ? t("toast.sending") : t("toast.sendingIn", { count: left });
   const action = left === 0 ? undefined : toast.action;
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-5 z-20 flex justify-center px-4">
@@ -122,7 +125,7 @@ function ToastBar() {
             {action.label}
           </button>
         )}
-        <button type="button" aria-label="Dismiss" className="rounded-full px-2 py-1 text-ink2 hover:bg-hover" onClick={dismiss}>
+        <button type="button" aria-label={t("toast.dismiss")} className="rounded-full px-2 py-1 text-ink2 hover:bg-hover" onClick={dismiss}>
           ✕
         </button>
       </div>
@@ -132,6 +135,7 @@ function ToastBar() {
 
 /** In front of the window after an update: what is new, until it is closed. */
 function WhatsNewDialog() {
+  const t = useT();
   const news = useStore((s) => s.whatsNew);
   const dismiss = useStore((s) => s.dismissWhatsNew);
   useEffect(() => {
@@ -146,9 +150,9 @@ function WhatsNewDialog() {
       <div role="dialog" aria-modal="true" aria-labelledby="whats-new-title" className="flex max-h-full w-[520px] max-w-full flex-col overflow-hidden rounded-[14px] border border-edge bg-card shadow-xl">
         <div className="flex-none px-6 pt-5">
           <h2 id="whats-new-title" className="text-[17px] font-semibold text-ink">
-            What is new in OpenWren {news.version}
+            {t("whatsNew.title", { version: news.version })}
           </h2>
-          <p className="mt-0.5 text-ink3">OpenWren was updated.</p>
+          <p className="mt-0.5 text-ink3">{t("whatsNew.subtitle")}</p>
         </div>
         <ul className="selectable min-h-0 flex-1 list-disc space-y-1.5 overflow-y-auto py-4 pr-6 pl-11 text-ink2">
           {news.changes.map((change) => (
@@ -157,10 +161,10 @@ function WhatsNewDialog() {
         </ul>
         <div className="flex flex-none items-center gap-3 border-t border-edge px-6 py-3">
           <button type="button" className="text-brand hover:underline" onClick={() => void backend.openLink(`${REPOSITORY}/blob/main/CHANGELOG.md`)}>
-            See all changes
+            {t("whatsNew.seeAll")}
           </button>
           <Button variant="primary" autoFocus className="ml-auto" onClick={dismiss}>
-            Got it
+            {t("whatsNew.gotIt")}
           </Button>
         </div>
       </div>
@@ -169,6 +173,8 @@ function WhatsNewDialog() {
 }
 
 export function App() {
+  const t = useT();
+  const lang = useLang();
   const dialog = useStore((s) => s.dialog);
   const init = useStore((s) => s.init);
   const messageId = useStore((s) => s.messageId);
@@ -205,18 +211,23 @@ export function App() {
     root.setAttribute("data-density", density);
   }, [theme, density]);
 
+  // The document language follows the interface language, for screen readers and spell-checking.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const [folderWidth, setFolderWidth] = useState(220);
   const [listWidth, setListWidth] = useState(340);
   return (
     <div className="relative flex h-full flex-col">
       <main className="flex min-h-0 flex-1 bg-card">
         <FolderPane width={folderWidth} />
-        <Resizer value={folderWidth} min={160} max={360} onChange={setFolderWidth} label="Resize folder pane" />
-        <ErrorBoundary what="The message list" resetKey={folderId}>
+        <Resizer value={folderWidth} min={160} max={360} onChange={setFolderWidth} label={t("a11y.resizeFolderPane")} />
+        <ErrorBoundary what={t("errorBoundary.messageList")} resetKey={folderId}>
           <MessageList width={listWidth} />
         </ErrorBoundary>
-        <Resizer value={listWidth} min={260} max={560} onChange={setListWidth} label="Resize message list" />
-        <ErrorBoundary what="This message" resetKey={messageId}>
+        <Resizer value={listWidth} min={260} max={560} onChange={setListWidth} label={t("a11y.resizeMessageList")} />
+        <ErrorBoundary what={t("errorBoundary.message")} resetKey={messageId}>
           <ReadingPane />
         </ErrorBoundary>
       </main>

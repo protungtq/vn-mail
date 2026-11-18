@@ -1,6 +1,6 @@
 # Security
 
-OpenWren reads untrusted mail and holds your account credentials, so security reports are taken seriously.
+VN Mail reads untrusted mail and holds your account credentials, so security reports are taken seriously.
 
 ## Reporting a problem
 
@@ -12,10 +12,10 @@ Include what you found, how to reproduce it, and the version (Settings → About
 
 - Mail content that runs code, loads remote content without being asked, or escapes the reading pane.
 - Anything that exposes passwords, tokens, the database key or mail to another program or to the network.
-- A way to make OpenWren send requests or mail the user did not ask for.
+- A way to make VN Mail send requests or mail the user did not ask for.
 - Problems in how packages are built or signed.
 
-## How OpenWren protects you
+## How VN Mail protects you
 
 - Mail is stored in an encrypted database (SQLCipher). Its key, your passwords and tokens are kept in the system keyring, not in files.
 - Mail HTML is sanitised, then shown in a sandboxed frame with scripts off and all network access blocked until you choose "Show images".

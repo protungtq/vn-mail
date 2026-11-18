@@ -1,8 +1,8 @@
-//! Starting OpenWren when the user logs in.
+//! Starting VN Mail when the user logs in.
 //!
-//! Linux desktops start every entry in `~/.config/autostart`. OpenWren keeps one
+//! Linux desktops start every entry in `~/.config/autostart`. VN Mail keeps one
 //! file there while the "start_at_login" setting is on (the default) and removes
-//! it when the setting is switched off. The entry starts OpenWren with `--hidden`,
+//! it when the setting is switched off. The entry starts VN Mail with `--hidden`,
 //! so it goes straight to the tray and only announces new mail.
 //!
 //! On macOS and Windows the autostart plugin does the same with a login item or a
@@ -11,12 +11,12 @@
 
 use std::path::{Path, PathBuf};
 
-/// The argument that starts OpenWren in the tray, without showing its window.
+/// The argument that starts VN Mail in the tray, without showing its window.
 pub const HIDDEN: &str = "--hidden";
 
-const FILE: &str = "openwren.desktop";
+const FILE: &str = "vnmail.desktop";
 
-/// `~/.config/autostart/openwren.desktop`, or None when the home folder is unknown.
+/// `~/.config/autostart/vnmail.desktop`, or None when the home folder is unknown.
 fn entry_path() -> Option<PathBuf> {
     let config = match std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()) {
         Some(dir) => PathBuf::from(dir),
@@ -50,7 +50,7 @@ fn quoted(path: &Path) -> String {
 
 fn entry(program: &Path) -> String {
     format!(
-        "[Desktop Entry]\nType=Application\nName=OpenWren\nComment=Check for new mail in the background\nTryExec={}\nExec={} {HIDDEN}\nIcon=openwren\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
+        "[Desktop Entry]\nType=Application\nName=VN Mail\nComment=Check for new mail in the background\nTryExec={}\nExec={} {HIDDEN}\nIcon=vnmail\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
         // TryExec: the desktop skips the entry once the program is gone, as after an uninstall.
         program.display(),
         quoted(program)
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn writes_and_removes_the_entry() {
-        let dir = std::env::temp_dir().join(format!("openwren-autostart-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vnmail-autostart-{}", std::process::id()));
         let path = dir.join("autostart").join(FILE);
         write(&path, true).unwrap();
         assert!(std::fs::read_to_string(&path).unwrap().contains(HIDDEN));

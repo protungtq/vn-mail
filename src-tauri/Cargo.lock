@@ -3118,7 +3118,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "openwren"
+name = "vnmail"
 version = "0.1.12"
 dependencies = [
  "ammonia",

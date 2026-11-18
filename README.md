@@ -1,11 +1,15 @@
 <p align="center">
-  <img src="docs/cover.png" alt="OpenWren: mail that stays yours. A modern, privacy-first, open-source mail app, built with Rust and React.">
+  <img src="docs/cover.png" alt="VN Mail: mail that stays yours. A modern, privacy-first, open-source mail app, built with Rust and React.">
 </p>
 
-# OpenWren
+# VN Mail
+
+> A fork of [OpenWren](https://github.com/VinceGHER/openwren) (Apache-2.0),
+> renamed with its own icon and app identifier. The update check and the
+> anonymous usage count are disabled: VN Mail has no server for them.
 
 A modern, privacy-first mail app that keeps your mail on your computer. Free
-and open source, for [Linux, Windows and macOS](https://openwren.app/download/).
+and open source, for [Linux, Windows and macOS](https://github.com/protungtq/vn-mail/releases).
 It is built with **Rust** (the engine: sync, search, encryption) and **React**
 (the interface), which makes it small and fast: a 14 MB download that starts in
 about half a second.
@@ -15,14 +19,14 @@ years, and protection against trackers and phishing built in.
 
 **If you like it, please star it.** It is the simplest way to help the project
 get found.
-If you rely on it, you can also [sponsor it](https://github.com/sponsors/VinceGHER):
-it keeps OpenWren free and maintained.
+VN Mail is maintained by TungTQ. Bug reports, fixes and ideas are welcome
+in the [issues](https://github.com/protungtq/vn-mail/issues).
 
-<a href="https://www.star-history.com/?repos=vincegher%2Fopenwren&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=protungtq%2Fvn-mail&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=vincegher/openwren&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=vincegher/openwren&type=date&legend=top-left" />
-   <img alt="Star history chart" src="https://api.star-history.com/chart?repos=vincegher/openwren&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=protungtq/vn-mail&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=protungtq/vn-mail&type=date&legend=top-left" />
+   <img alt="Star history chart" src="https://api.star-history.com/chart?repos=protungtq/vn-mail&type=date&legend=top-left" />
  </picture>
 </a>
 
@@ -30,12 +34,12 @@ it keeps OpenWren free and maintained.
 | --- | --- |
 | ![The inbox with a message open](docs/inbox.png) | ![The inbox in the dark theme](docs/inbox-dark.png) |
 
-## Why OpenWren
+## Why VN Mail
 
 - **Free.** No price, no account with us, no ads.
 - **Open source.** Apache-2.0. Every line is public: read it, build it, fork it.
-- **Built because I could not find a mail app for Linux that I liked.** I wanted
-  something modern, fast and private, so I wrote it.
+- **Born from OpenWren.** Its author could not find a mail app for Linux that
+  he liked, so he wrote one: modern, fast and private. VN Mail carries it on.
 - **Private.** Mail is stored encrypted on your computer. Trackers are removed
   and suspicious mail is flagged before you click.
 
@@ -64,74 +68,38 @@ Method, all numbers and how to rerun them: [docs/benchmarks.md](docs/benchmarks.
 
 ## Install
 
-OpenWren runs on Linux, Windows and macOS. The same
-steps, with copy buttons, are on the [download page](https://openwren.app/download/).
-
-### Linux
-
-The apt and dnf repositories deliver updates through your normal system
-updates, and OpenWren tells you when a new version is out.
-
-**Debian, Ubuntu and derivatives**
-
-```bash
-curl -fsSL https://packages.openwren.app/key.gpg | sudo tee /usr/share/keyrings/openwren.gpg > /dev/null
-```
-
-```bash
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/openwren.gpg] https://packages.openwren.app/apt stable main" | sudo tee /etc/apt/sources.list.d/openwren.list
-```
-
-```bash
-sudo apt update && sudo apt install openwren
-```
-
-**Fedora and other dnf systems**
-
-```bash
-sudo curl -fsSL -o /etc/yum.repos.d/openwren.repo https://packages.openwren.app/rpm/openwren.repo
-```
-
-```bash
-sudo dnf install openwren
-```
-
-**AppImage:** download [OpenWren-linux-x86_64.AppImage](https://packages.openwren.app/latest/OpenWren-linux-x86_64.AppImage), make it executable and run it. It updates itself from inside the app.
-
-The repositories are signed with the OpenWren key, fingerprint
-`8991 7136 148C 9676 F3A5 1B21 4B8A FB6E 4238 18E0`.
+Download the installer for your system from
+[Releases](https://github.com/protungtq/vn-mail/releases).
 
 ### Windows
 
 For 64-bit Windows 10 and 11. Tested on Windows 11.
 
-1. Download [OpenWren-windows-x64-setup.exe](https://packages.openwren.app/latest/OpenWren-windows-x64-setup.exe) and run it.
+1. Download the `*-setup.exe` file and run it.
 2. The installer is not signed with a certificate yet, so Windows may show
    "Windows protected your PC": choose **More info**, then **Run anyway**.
 3. Follow the installer. It installs for your user only and needs no
    administrator rights.
-
-OpenWren tells you when a new version is out and installs it for you.
 
 ### macOS
 
 For all Macs, Apple silicon and Intel, with macOS 11 or later. Tested on
 macOS 14 with an Intel processor; not yet tried on Apple silicon.
 
-1. Download [OpenWren-macos-universal.dmg](https://packages.openwren.app/latest/OpenWren-macos-universal.dmg), open it and drag OpenWren into Applications.
-2. Open OpenWren. The app is not signed with an Apple certificate yet, so
+1. Download the `.dmg` file, open it and drag VN Mail into Applications.
+2. Open VN Mail. The app is not signed with an Apple certificate yet, so
    macOS refuses the first time ("cannot be opened because Apple cannot check
    it for malicious software"). Click **OK**.
-3. Open Terminal, run this once, and open OpenWren again:
+3. Open Terminal, run this once, and open VN Mail again:
 
 ```bash
-xattr -cr /Applications/OpenWren.app
+xattr -cr /Applications/VN Mail.app
 ```
 
-OpenWren tells you when a new version is out and installs it for you.
+### Linux
 
-Checksums of the Windows and macOS files:
-[SHA256SUMS](https://packages.openwren.app/latest/SHA256SUMS).
+No Linux packages are published for this fork yet. Build from source,
+as described below.
 
 ### Build from source
 
@@ -157,26 +125,26 @@ your menu without installing the package, run `sh scripts/install-launcher.sh`.
 Removing the package takes away the program, its menu entry and its icons:
 
 ```bash
-sudo apt remove openwren
+sudo apt remove vnmail
 ```
 
 ```bash
-sudo dnf remove openwren
+sudo dnf remove vnmail
 ```
 
 Like other Linux apps, this leaves your own data in place, so that a reinstall
-finds your accounts and mail again. To remove everything, quit OpenWren first
+finds your accounts and mail again. To remove everything, quit VN Mail first
 (tray icon → Quit), then delete these three things.
 
 | What | Where | Remove it with |
 | --- | --- | --- |
-| Downloaded mail, search index, drafts and settings (the encrypted database) | `~/.local/share/org.openwren.app/` | `rm -rf ~/.local/share/org.openwren.app` |
-| The start-at-login entry | `~/.config/autostart/openwren.desktop` | `rm -f ~/.config/autostart/openwren.desktop` |
-| Account passwords and the database key | The system keyring, under the name "OpenWren" | `secret-tool clear service OpenWren` |
+| Downloaded mail, search index, drafts and settings (the encrypted database) | `~/.local/share/asia.so1.vnmail/` | `rm -rf ~/.local/share/asia.so1.vnmail` |
+| The start-at-login entry | `~/.config/autostart/vnmail.desktop` | `rm -f ~/.config/autostart/vnmail.desktop` |
+| Account passwords and the database key | The system keyring, under the name "VN Mail" | `secret-tool clear service VN Mail` |
 
 `secret-tool` is in the package `libsecret-tools` (Debian, Ubuntu) or
 `libsecret` (Fedora). Without it, open "Passwords and Keys", search for
-"OpenWren" and delete the entries.
+"VN Mail" and delete the entries.
 
 This deletes only the copy on this computer: your mail stays on your mail
 servers. The database cannot be read without the key from the keyring, so once
@@ -193,7 +161,7 @@ If you ran `scripts/install-launcher.sh` from a source checkout, undo it with
 - **Any other account:** enter your address and password; the server names are
   guessed from the address and can be corrected.
 
-Passwords are stored in the system keyring, never in OpenWren's files.
+Passwords are stored in the system keyring, never in VN Mail's files.
 
 ## Features
 
@@ -264,7 +232,7 @@ Archive, delete and snooze are one click. Move by menu or by dragging onto a fol
 
 **Private, and you can check**
 
-Mail is stored in an encrypted database; passwords stay in the system keyring. Every protection has a switch, and the two requests OpenWren makes for itself, the daily usage count and the check for a new version, can both be switched off.
+Mail is stored in an encrypted database; passwords stay in the system keyring. Every protection has a switch, and VN Mail makes no requests for itself: no usage count, no update check.
 
 </td>
 </tr>
@@ -282,21 +250,10 @@ A short welcome adds your first account and lets you pick the theme, text size a
 
 ## Privacy
 
-OpenWren has no server of its own that sees your mail. It talks to your mail
+VN Mail has no server of its own that sees your mail. It talks to your mail
 servers, and to nobody else unless you ask (showing remote images, signing in
-with Google, unsubscribing).
-
-Two requests go to the project itself, both set in Settings → Privacy:
-
-- **Anonymous usage count**, only if you choose it. Once a day the app sends
-  one request so the project can count how many people use it. It carries the
-  app version, the kind of package and system, and nothing that identifies you;
-  the server keeps only totals. The welcome screen asks, with neither answer
-  picked in advance, and nothing is sent until you say yes.
-- **Looking for a new version**, on unless switched off. A few times a day the app downloads one small
-  public file from `packages.openwren.app` that names the newest version. The
-  request carries nothing about you or your computer, not even the version you
-  have.
+with Google, unsubscribing). It sends no usage count and checks for no new
+version: both are disabled in this fork.
 
 Every request the app makes is listed in [PRIVACY.md](PRIVACY.md).
 
@@ -336,8 +293,8 @@ src-tauri/src/       engine (Rust)
   db.rs              all the SQL
   parse.rs           reading and cleaning mail
   smtp.rs oauth.rs   sending, Google sign-in
-stats/               the usage counter (Cloudflare Worker)
-website/             openwren.app (Astro)
+stats/               the upstream usage counter (not used by this fork)
+website/             the upstream project's site (not used by this fork)
 ```
 
 ## Tests
@@ -380,11 +337,12 @@ reporting a vulnerability privately.
 - Categories, pins and snoozes are stored on this computer, not on the server.
 - Server-side search understands plain ASCII words only.
 - HTML mail is always shown on a white background, also in the dark theme.
-- Blocking a sender moves their mail when OpenWren syncs, so it only works while the app runs.
+- Blocking a sender moves their mail when VN Mail syncs, so it only works while the app runs.
 - No Flatpak yet.
 
 ## Licence
 
-[Apache-2.0](LICENSE). The name "OpenWren" and the logo are not covered by it;
-see [TRADEMARKS.md](TRADEMARKS.md). Third-party components are listed in
+[Apache-2.0](LICENSE). The name "OpenWren" and the logo belong to the upstream
+project and are not covered by it; see [TRADEMARKS.md](TRADEMARKS.md).
+Third-party components are listed in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

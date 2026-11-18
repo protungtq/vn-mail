@@ -1,38 +1,31 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "openwren",
-  "version": "0.1.12",
-  "identifier": "org.openwren.app",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
-  },
   "app": {
-    "windows": [
-      {
-        "title": "OpenWren",
-        "width": 1200,
-        "height": 760,
-        "minWidth": 900,
-        "minHeight": 600,
-        "visible": false
-      }
-    ],
     "security": {
       "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src ipc: http://ipc.localhost",
       "devCsp": null
-    }
+    },
+    "windows": [
+      {
+        "height": 760,
+        "minHeight": 600,
+        "minWidth": 900,
+        "title": "VN Mail",
+        "visible": false,
+        "width": 1200
+      }
+    ]
+  },
+  "build": {
+    "beforeBuildCommand": "pnpm build",
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "deb",
-      "rpm",
-      "appimage"
-    ],
     "category": "Productivity",
+    "homepage": "https://so1.asia",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,40 +35,27 @@
       "icons/icon.ico"
     ],
     "linux": {
+      "appimage": {},
       "deb": {
-        "desktopTemplate": "openwren.desktop",
-        "conflicts": [
-          "open-wren"
-        ],
-        "replaces": [
-          "open-wren"
-        ]
+        "desktopTemplate": "openwren.desktop"
       },
       "rpm": {
         "depends": [
           "libayatana-appindicator-gtk3"
         ],
-        "desktopTemplate": "openwren.desktop",
-        "obsoletes": [
-          "open-wren"
-        ]
-      },
-      "appimage": {}
-    },
-    "publisher": "The OpenWren authors",
-    "homepage": "https://openwren.app",
-    "shortDescription": "A modern, open-source mail app",
-    "longDescription": "OpenWren is a mail app for Gmail and any IMAP account. It keeps your mail in an encrypted database on your own computer, removes trackers and warns about suspicious messages."
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk1QUVGNkM5QzUxNDFDQTQKUldTa0hCVEZ5ZmF1bGQ3QS9EWDdXT3MvbDVUY0VUTTZjbGI2R2d0SjNQOWtDM2RGZDhZK3RtTG8K",
-      "endpoints": [
-        "https://packages.openwren.app/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
+        "desktopTemplate": "openwren.desktop"
       }
-    }
-  }
+    },
+    "longDescription": "VN Mail is a mail app for Gmail and any IMAP account. It keeps your mail in an encrypted database on your own computer, removes trackers and warns about suspicious messages.",
+    "publisher": "TungTQ",
+    "shortDescription": "A modern, open-source mail app",
+    "targets": [
+      "deb",
+      "rpm",
+      "appimage"
+    ]
+  },
+  "identifier": "asia.so1.vnmail",
+  "productName": "VN Mail",
+  "version": "0.1.12"
 }

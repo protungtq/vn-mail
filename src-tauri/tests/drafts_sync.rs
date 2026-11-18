@@ -3,10 +3,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use openwren_lib::db::{self, Db};
-use openwren_lib::model::{AccountSettings, ImapSettings, Security};
-use openwren_lib::sync::{self, Silent};
-use openwren_lib::{imap, store};
+use vnmail_lib::db::{self, Db};
+use vnmail_lib::model::{AccountSettings, ImapSettings, Security};
+use vnmail_lib::sync::{self, Silent};
+use vnmail_lib::{imap, store};
 
 #[tokio::test]
 async fn a_draft_is_uploaded_replaced_and_removed() {

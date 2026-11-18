@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { highlight } from "../lib/search";
 import { brandFor, isLight } from "../lib/brands";
 import { senderConfirmed } from "../lib/privacy";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default" | "primary" | "ghost" };
@@ -62,13 +63,14 @@ export function Chip({ on, className = "", ...rest }: ChipProps) {
  * else initials. An address alone proves nothing: anyone can write one.
  */
 export function Avatar({ name, address, auth, accountId }: { name: string; address?: string; auth?: string | null; accountId?: number }) {
+  const t = useT();
   const logos = useStore((s) => s.settings.brand_logos !== "off");
   const server = useStore((s) => s.accounts.find((a) => a.id === accountId)?.authServer);
   const brand = logos && address && senderConfirmed(auth, server) ? brandFor(address) : undefined;
   if (brand) {
     return (
       <div className="flex size-8 flex-none items-center justify-center rounded-full" style={{ background: `#${brand.hex}` }} title={brand.title}>
-        <svg viewBox="0 0 24 24" className="size-[17px]" fill={isLight(brand.hex) ? "#1f2328" : "#fff"} role="img" aria-label={`${brand.title} logo`}>
+        <svg viewBox="0 0 24 24" className="size-[17px]" fill={isLight(brand.hex) ? "#1f2328" : "#fff"} role="img" aria-label={t("avatar.logo", { brand: brand.title })}>
           <path d={brand.path} />
         </svg>
       </div>
@@ -234,7 +236,10 @@ export const categories: Record<string, string> = {
 };
 
 export function CategoryDot({ name }: { name: string }) {
-  return <span title={name} aria-label={`${name} category`} className="inline-block size-2.5 flex-none rounded-full" style={{ background: categories[name] ?? "#999" }} />;
+  const t = useT();
+  // Stored names are the English colour words; only the words shown are translated.
+  const label = name in categories ? t(`category.${name}`) : name;
+  return <span title={label} aria-label={t("category.label", { name: label })} className="inline-block size-2.5 flex-none rounded-full" style={{ background: categories[name] ?? "#999" }} />;
 }
 
 export const fieldBox = "h-9 w-full rounded-[10px] border border-edge bg-card px-2.5 outline-none focus:border-line placeholder:text-ink3";

@@ -1,4 +1,4 @@
-# Contributing to OpenWren
+# Contributing to VN Mail
 
 Thanks for helping. Bug reports, fixes, translations and ideas are all welcome.
 
@@ -58,7 +58,7 @@ A change to the engine needs a test. A change to a screen needs a before and aft
 
 ## Sign your work
 
-OpenWren is licensed under Apache-2.0, and contributions are accepted under the same licence. Add a sign-off line to each commit to confirm you wrote the change or have the right to submit it (the [Developer Certificate of Origin](https://developercertificate.org)):
+VN Mail is licensed under Apache-2.0, and contributions are accepted under the same licence. Add a sign-off line to each commit to confirm you wrote the change or have the right to submit it (the [Developer Certificate of Origin](https://developercertificate.org)):
 
 ```bash
 git commit -s -m "Fix the unread count in All inboxes"
@@ -66,4 +66,4 @@ git commit -s -m "Fix the unread count in All inboxes"
 
 ## Name and logo
 
-The code is free to use and change. The name "OpenWren" and its logo are not; see [TRADEMARKS.md](TRADEMARKS.md).
+The code is free to use and change. The name "OpenWren" and its logo belong to the upstream project and are not covered by the licence; see [TRADEMARKS.md](TRADEMARKS.md). VN Mail has its own name and icon.

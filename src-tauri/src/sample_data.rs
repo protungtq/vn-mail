@@ -74,7 +74,7 @@ pub fn fill(conn: &mut Connection, account_id: i64, folder_id: i64, count: usize
                 to_addresses: "Katy Reid <katy@work.test>".into(),
                 subject,
                 date: Some(now - (i as i64 * span / count.max(1) as i64)),
-                message_id: Some(format!("bench-{i}@openwren.test")),
+                message_id: Some(format!("bench-{i}@vnmail.test")),
                 focused: !bulk,
                 ..Header::default()
             };

@@ -1,14 +1,8 @@
 import { IconCalendar, IconPaperclip } from "@tabler/icons-react";
 import { Chip, Divider } from "../components/ui";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 import type { DateFilter } from "../types";
-
-const dates: [DateFilter, string][] = [
-  ["any", "Any time"],
-  ["past-year", "Past year"],
-  ["older-1y", "Older than 1 year"],
-  ["older-2y", "Older than 2 years"],
-];
 
 const dateBox = "h-7 rounded-full border border-edge bg-card px-2 text-ink";
 
@@ -22,13 +16,20 @@ function toSeconds(day: string, addDays: number): number | null {
 
 /** Filter row shown under the header while a search is active. */
 export function SearchChips() {
+  const t = useT();
   const filters = useStore((s) => s.filters);
   const setFilters = useStore((s) => s.setFilters);
   const accounts = useStore((s) => s.accounts);
+  const dates: [DateFilter, string][] = [
+    ["any", t("search.date.any")],
+    ["past-year", t("search.date.pastYear")],
+    ["older-1y", t("search.date.older1y")],
+    ["older-2y", t("search.date.older2y")],
+  ];
   return (
-    <div className="mt-2 flex flex-none flex-wrap items-center gap-1.5" role="toolbar" aria-label="Search filters">
+    <div className="mt-2 flex flex-none flex-wrap items-center gap-1.5" role="toolbar" aria-label={t("search.filtersLabel")}>
       <Chip on={filters.accountId === null} onClick={() => setFilters({ accountId: null })}>
-        All accounts
+        {t("search.allAccounts")}
       </Chip>
       {accounts.map((a) => (
         <Chip key={a.id} on={filters.accountId === a.id} onClick={() => setFilters({ accountId: a.id })}>
@@ -38,7 +39,7 @@ export function SearchChips() {
       <Divider />
       <Chip on={filters.hasAttachment} onClick={() => setFilters({ hasAttachment: !filters.hasAttachment })}>
         <IconPaperclip size={15} />
-        Has attachment
+        {t("search.hasAttachment")}
       </Chip>
       <Divider />
       {dates.map(([value, label]) => (
@@ -48,13 +49,13 @@ export function SearchChips() {
       ))}
       <Chip on={filters.date === "custom"} onClick={() => setFilters({ date: "custom" })}>
         <IconCalendar size={15} />
-        Custom range
+        {t("search.date.custom")}
       </Chip>
       {filters.date === "custom" && (
         <span className="flex items-center gap-1.5 text-[13px] text-ink2">
-          <input type="date" aria-label="From date" className={dateBox} onChange={(e) => setFilters({ after: toSeconds(e.target.value, 0) })} />
-          to
-          <input type="date" aria-label="To date" className={dateBox} onChange={(e) => setFilters({ before: toSeconds(e.target.value, 1) })} />
+          <input type="date" aria-label={t("search.date.from")} className={dateBox} onChange={(e) => setFilters({ after: toSeconds(e.target.value, 0) })} />
+          {t("search.date.toWord")}
+          <input type="date" aria-label={t("search.date.to")} className={dateBox} onChange={(e) => setFilters({ before: toSeconds(e.target.value, 1) })} />
         </span>
       )}
     </div>

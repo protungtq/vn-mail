@@ -5,6 +5,7 @@ import { RichText } from "../components/RichText";
 import { Button, IconButton, Menu } from "../components/ui";
 import { fileSize } from "../lib/search";
 import { signatureHtml } from "../lib/signature";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 import type { Contact, Draft } from "../types";
 import { mod } from "../lib/keys";
@@ -25,7 +26,8 @@ export function completeWith(value: string, contact: Contact): string {
   return `${done}${done && !done.endsWith(" ") ? " " : ""}${entry}, `;
 }
 
-function Recipients({ name, value, onChange, autoFocus }: { name: string; value: string; onChange: (v: string) => void; autoFocus?: boolean }) {
+function Recipients({ name, value, onChange, autoFocus, placeholder }: { name: string; value: string; onChange: (v: string) => void; autoFocus?: boolean; placeholder?: string }) {
+  const t = useT();
   const [suggestions, setSuggestions] = useState<Contact[]>([]);
   const [focused, setFocused] = useState(false);
   const token = lastToken(value);
@@ -45,14 +47,14 @@ function Recipients({ name, value, onChange, autoFocus }: { name: string; value:
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
-        placeholder={name === "To" ? "name@company.com" : undefined}
+        placeholder={placeholder}
         className={input}
         autoFocus={autoFocus}
         autoComplete="off"
         spellCheck={false}
       />
       {focused && suggestions.length > 0 && (
-        <div className="absolute top-full left-16 z-20 mt-1 min-w-72 rounded-[10px] border border-edge bg-card py-1 shadow-lg" role="listbox" aria-label={`${name} suggestions`}>
+        <div className="absolute top-full left-16 z-20 mt-1 min-w-72 rounded-[10px] border border-edge bg-card py-1 shadow-lg" role="listbox" aria-label={t("compose.suggestions", { name })}>
           {suggestions.map((c) => (
             <button
               key={c.address}
@@ -87,6 +89,7 @@ function morning(weekday: number | null): number {
 }
 
 export function Composer({ className }: { className: string }) {
+  const t = useT();
   const draft = useStore((s) => s.draft)!;
   const accounts = useStore((s) => s.accounts);
   const signatures = useStore((s) => s.signatures);
@@ -176,7 +179,7 @@ export function Composer({ className }: { className: string }) {
 
   async function submit(sendAt?: number) {
     if (busy) return;
-    if (![to, cc, bcc].some((v) => v.trim())) return setError("Add at least one recipient.");
+    if (![to, cc, bcc].some((v) => v.trim())) return setError(t("compose.recipientError"));
     setError("");
     setBusy(true);
     try {
@@ -208,7 +211,7 @@ export function Composer({ className }: { className: string }) {
   return (
     <section
       className={`${className} flex flex-col px-5 py-4`}
-      aria-label="New message"
+      aria-label={t("compose.newMessage")}
       onKeyDown={(e) => {
         if (mod(e) && e.key === "Enter") void submit();
       }}
@@ -216,23 +219,23 @@ export function Composer({ className }: { className: string }) {
       <div className="mb-1.5 flex items-center gap-2">
         <Button variant="primary" onClick={() => void submit()}>
           <IconSend size={18} />
-          {busy ? "Sending…" : "Send"}
+          {busy ? t("toast.sending") : t("common.send")}
         </Button>
         <Menu
-          label="Send later"
+          label={t("compose.sendLater")}
           button={
             <span className="flex items-center gap-1 px-1 text-[13px]">
-              <IconClock size={18} /> Send later
+              <IconClock size={18} /> {t("compose.sendLater")}
             </span>
           }
           items={[
-            { label: "Tomorrow at 8:00", onSelect: () => void submit(morning(null)) },
-            { label: "Monday at 8:00", onSelect: () => void submit(morning(1)) },
+            { label: t("snooze.tomorrow8"), onSelect: () => void submit(morning(null)) },
+            { label: t("snooze.monday8"), onSelect: () => void submit(morning(1)) },
           ]}
         />
         <input
           type="datetime-local"
-          aria-label="Send at a chosen time"
+          aria-label={t("compose.sendAtLabel")}
           value={later}
           onChange={(e) => setLater(e.target.value)}
           className="h-8 rounded-lg border border-edge bg-card px-2 text-[13px] text-ink2"
@@ -242,23 +245,23 @@ export function Composer({ className }: { className: string }) {
             className="h-8"
             onClick={() => {
               const at = Math.floor(new Date(later).getTime() / 1000);
-              if (at * 1000 <= Date.now()) setError("Choose a time in the future.");
+              if (at * 1000 <= Date.now()) setError(t("compose.futureError"));
               else void submit(at);
             }}
           >
-            Schedule
+            {t("compose.schedule")}
           </Button>
         )}
         <span className="ml-auto text-xs text-ink3" role="status">
-          {saved ? "Draft saved" : ""}
+          {saved ? t("compose.draftSaved") : ""}
         </span>
-        <IconButton label="Discard draft" onClick={() => void discard()}>
+        <IconButton label={t("drafts.discard")} onClick={() => void discard()}>
           <IconTrash size={20} />
         </IconButton>
       </div>
 
       <label className={field}>
-        <span className={label}>From</span>
+        <span className={label}>{t("compose.from")}</span>
         <select value={accountId} onChange={(e) => edited(setAccountId)(Number(e.target.value))} className={input}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -268,19 +271,19 @@ export function Composer({ className }: { className: string }) {
         </select>
         {!showCopies && (
           <button type="button" className="flex-none text-ink2 hover:text-ink" onClick={() => setShowCopies(true)}>
-            Cc Bcc
+            {t("compose.ccBcc")}
           </button>
         )}
       </label>
-      <Recipients name="To" value={to} onChange={edited(setTo)} autoFocus={draft.to === ""} />
+      <Recipients name={t("compose.to")} value={to} onChange={edited(setTo)} autoFocus={draft.to === ""} placeholder="name@company.com" />
       {showCopies && (
         <>
-          <Recipients name="Cc" value={cc} onChange={edited(setCc)} />
-          <Recipients name="Bcc" value={bcc} onChange={edited(setBcc)} />
+          <Recipients name={t("compose.cc")} value={cc} onChange={edited(setCc)} />
+          <Recipients name={t("compose.bcc")} value={bcc} onChange={edited(setBcc)} />
         </>
       )}
       <label className={field}>
-        <span className={label}>Subject</span>
+        <span className={label}>{t("compose.subject")}</span>
         <input value={subject} onChange={(e) => edited(setSubject)(e.target.value)} className={input} />
       </label>
 
@@ -292,7 +295,7 @@ export function Composer({ className }: { className: string }) {
 
       <RichText
         className="mt-2.5 min-h-40 flex-1"
-        label="Message"
+        label={t("compose.messageLabel")}
         initial={draft.html}
         autoFocus={draft.to !== ""}
         onChange={(value) => {
@@ -303,18 +306,18 @@ export function Composer({ className }: { className: string }) {
         toolbarEnd={
           <>
             <button type="button" onClick={() => void attach()} className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px] text-ink2 hover:bg-hover">
-              <IconPaperclip size={16} /> Attach
+              <IconPaperclip size={16} /> {t("compose.attach")}
             </button>
             <label className="flex items-center gap-1 text-[13px] text-ink2">
               <IconSignature size={16} />
-              <span className="sr-only">Signature</span>
+              <span className="sr-only">{t("compose.signature")}</span>
               <select
                 value={signatureId ?? ""}
                 onChange={(e) => setSignatureId(e.target.value ? Number(e.target.value) : null)}
                 className="bg-transparent text-ink outline-none"
-                aria-label="Signature"
+                aria-label={t("compose.signature")}
               >
-                <option value="">No signature</option>
+                <option value="">{t("compose.noSignature")}</option>
                 {signatures.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -327,16 +330,16 @@ export function Composer({ className }: { className: string }) {
       />
 
       {signature && <div className="rich selectable mt-2 flex-none border-t border-dashed border-edge pt-2.5 text-ink2" dangerouslySetInnerHTML={{ __html: signatureHtml(signature) }} />}
-      {draft.quote && <p className="mt-2 flex-none text-xs text-ink3">The original message is included below your text.</p>}
+      {draft.quote && <p className="mt-2 flex-none text-xs text-ink3">{t("compose.quoteNote")}</p>}
       {(files.length > 0 || forwarded.length > 0) && (
         <div className="mt-3 flex flex-none flex-wrap gap-2">
           {forwarded.map((item) => (
-            <span key={`fw-${item.index}`} className="inline-flex items-center gap-1.5 rounded-[10px] border border-edge py-1 pr-1 pl-2.5 text-ink2" title="From the forwarded message">
+            <span key={`fw-${item.index}`} className="inline-flex items-center gap-1.5 rounded-[10px] border border-edge py-1 pr-1 pl-2.5 text-ink2" title={t("compose.fromForwarded")}>
               <IconPaperclip size={15} />
               {item.name}
               <span className="text-xs text-ink3">{fileSize(item.size)}</span>
               <IconButton
-                label={`Remove ${item.name}`}
+                label={t("compose.removeNamed", { name: item.name })}
                 className="size-6"
                 onClick={() => {
                   setForwarded((all) => all.filter((x) => x.index !== item.index));
@@ -352,13 +355,13 @@ export function Composer({ className }: { className: string }) {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 hover:text-ink hover:underline"
-                title={`Open ${path}`}
+                title={t("compose.openAttachment", { path })}
                 onClick={() => void backend.openPickedFile(path).catch((e) => setError(errorText(e)))}
               >
                 <IconPaperclip size={15} />
                 {path.split(/[\\/]/).pop()}
               </button>
-              <IconButton label="Remove attachment" className="size-6" onClick={() => {
+              <IconButton label={t("compose.removeAttachment")} className="size-6" onClick={() => {
                   setFiles((f) => f.filter((p) => p !== path));
                   touch();
                 }}>

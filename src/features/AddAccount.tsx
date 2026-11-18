@@ -2,6 +2,7 @@ import { IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { backend, errorText } from "../backend";
 import { Button, Chip, IconButton, fieldBox, fieldCaption } from "../components/ui";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 import type { Security, ServerSettings } from "../types";
 
@@ -27,17 +28,18 @@ interface Server {
 }
 
 function ServerRow({ id, title, optional, protocol, value, onChange }: { id: string; title: string; optional?: boolean; protocol: "imap" | "smtp"; value: Server; onChange: (s: Server) => void }) {
+  const t = useT();
   return (
     <>
       <label className={`${fieldCaption} mt-3`} htmlFor={id}>
         {title}
-        {optional && <span className="text-ink3"> (optional, needed to send mail)</span>}
+        {optional && <span className="text-ink3"> {t("account.optionalSend")}</span>}
       </label>
       <div className="grid grid-cols-[1fr_80px_150px] gap-2">
         <input id={id} value={value.host} placeholder={`${protocol}.company.com`} className={fieldBox} autoComplete="off" onChange={(e) => onChange({ ...value, host: e.target.value, edited: true })} />
-        <input aria-label={`${title} port`} inputMode="numeric" value={value.port} onChange={(e) => onChange({ ...value, port: e.target.value })} className={fieldBox} />
+        <input aria-label={t("account.portLabel", { title })} inputMode="numeric" value={value.port} onChange={(e) => onChange({ ...value, port: e.target.value })} className={fieldBox} />
         <select
-          aria-label={`${title} encryption`}
+          aria-label={t("account.encryptionLabel", { title })}
           value={value.security}
           className={fieldBox}
           onChange={(e) => {
@@ -49,7 +51,7 @@ function ServerRow({ id, title, optional, protocol, value, onChange }: { id: str
         >
           <option value="tls">TLS</option>
           <option value="starttls">STARTTLS</option>
-          <option value="none">None (not secure)</option>
+          <option value="none">{t("account.noEncryption")}</option>
         </select>
       </div>
     </>
@@ -63,7 +65,7 @@ function toSettings(server: Server, username: string): ServerSettings {
 const validPort = (s: Server) => Number.isInteger(Number(s.port)) && Number(s.port) >= 1 && Number(s.port) <= 65535;
 
 /**
- * What was typed, kept while OpenWren runs so that closing the dialog after a
+ * What was typed, kept while VN Mail runs so that closing the dialog after a
  * failed attempt does not lose it. Kept in memory only, and forgotten once the account is added.
  */
 let remembered: { kind: Kind; address: string; name: string; password: string; incoming: Server; outgoing: Server } | null = null;
@@ -77,6 +79,7 @@ export function preferAccountKind(kind: Kind) {
 
 /** Add a Google or IMAP account. */
 export function AddAccount() {
+  const t = useT();
   const setDialog = useStore((s) => s.setDialog);
   const refresh = useStore((s) => s.refresh);
   const hasGoogleClient = useStore((s) => (s.settings.google_client_id ?? "").trim() !== "");
@@ -114,12 +117,12 @@ export function AddAccount() {
     e.preventDefault();
     if (busy) return;
     const user = address.trim();
-    if (!user.includes("@")) return setError("Enter a full email address.");
-    if (kind === "google" && !oauth && !password.trim()) return setError("Paste the app password you created in your Google account.");
+    if (!user.includes("@")) return setError(t("account.errAddress"));
+    if (kind === "google" && !oauth && !password.trim()) return setError(t("account.errAppPassword"));
     if (kind !== "google") {
-      if (!password) return setError("Enter the password for this account.");
-      if (!incoming.host.trim()) return setError("Enter the incoming mail server.");
-      if (!validPort(incoming) || (outgoing.host.trim() && !validPort(outgoing))) return setError("Enter a port between 1 and 65535.");
+      if (!password) return setError(t("account.errPassword"));
+      if (!incoming.host.trim()) return setError(t("account.errIncoming"));
+      if (!validPort(incoming) || (outgoing.host.trim() && !validPort(outgoing))) return setError(t("account.errPort"));
     }
     setError("");
     setBusy(true);
@@ -168,14 +171,14 @@ export function AddAccount() {
       >
         <div className="mb-3 flex items-center">
           <h2 id="add-account-title" className="text-lg font-semibold">
-            Add account
+            {t("accounts.add")}
           </h2>
-          <IconButton label="Close" className="ml-auto" onClick={close}>
+          <IconButton label={t("common.close")} className="ml-auto" onClick={close}>
             <IconX size={20} />
           </IconButton>
         </div>
 
-        <div className="mb-3 flex gap-2" role="radiogroup" aria-label="Account type">
+        <div className="mb-3 flex gap-2" role="radiogroup" aria-label={t("account.typeLabel")}>
           <Chip on={kind === "google"} onClick={() => changeKind("google")}>
             Google
           </Chip>
@@ -185,7 +188,7 @@ export function AddAccount() {
         </div>
 
         <label className={fieldCaption} htmlFor="aa-address">
-          Email address
+          {t("account.emailAddress")}
         </label>
         <input id="aa-address" type="email" autoFocus autoComplete="off" value={address} placeholder="name@company.com" className={fieldBox} onChange={(e) => changeAddress(e.target.value)} />
 
@@ -193,14 +196,14 @@ export function AddAccount() {
           {/* Gmail's password field sits below its instructions instead. */}
           <div>
             <label className={fieldCaption} htmlFor="aa-name">
-              Your name <span className="text-ink3">(optional)</span>
+              {t("account.yourName")} <span className="text-ink3">{t("common.optional")}</span>
             </label>
             <input id="aa-name" value={name} onChange={(e) => setName(e.target.value)} className={fieldBox} autoComplete="off" />
           </div>
           {kind !== "google" && (
             <div>
               <label className={fieldCaption} htmlFor="aa-password">
-                Password
+                {t("account.password")}
               </label>
               <input id="aa-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={fieldBox} autoComplete="off" />
             </div>
@@ -210,52 +213,52 @@ export function AddAccount() {
         {kind === "google" && !oauth && (
           <>
             <div className="mt-3 rounded-[10px] bg-canvas px-3.5 py-3 text-[13px] text-ink2">
-              <div className="mb-1.5 text-ink">Gmail needs an app password</div>
+              <div className="mb-1.5 text-ink">{t("account.gmailAppPasswordTitle")}</div>
               <ol className="list-decimal space-y-1 pl-5">
-                <li>Turn on 2-step verification in your Google account, if it is not on yet.</li>
+                <li>{t("account.gmailStep1")}</li>
                 <li>
-                  Create an app password named "OpenWren".{" "}
+                  {t("account.gmailStep2")}{" "}
                   <button type="button" className="text-brand underline" onClick={() => void backend.openLink("https://myaccount.google.com/apppasswords")}>
-                    Open Google's app passwords page
+                    {t("account.openAppPasswords")}
                   </button>
                 </li>
-                <li>Paste the 16 letters below. Your normal Google password does not work here.</li>
+                <li>{t("account.gmailStep3")}</li>
               </ol>
             </div>
             <label className={`${fieldCaption} mt-3`} htmlFor="aa-app-password">
-              App password
+              {t("account.appPassword")}
             </label>
             <input id="aa-app-password" type="password" value={password} placeholder="abcd efgh ijkl mnop" onChange={(e) => setPassword(e.target.value)} className={fieldBox} autoComplete="off" />
             <p className="mt-2 text-xs text-ink3">
-              It is stored in your system's password store. You can remove it at any time in your Google account.{" "}
+              {t("account.storedNote")}{" "}
               <button type="button" className="underline hover:text-ink" onClick={() => (setGoogleWay("oauth"), setError(""))}>
-                Advanced: sign in with Google instead
+                {t("account.advancedOauth")}
               </button>
             </p>
           </>
         )}
         {oauth && (
           <p className="mt-3 text-[13px] text-ink2">
-            Your browser opens so you can sign in with Google. OpenWren never sees your password. This way needs your own Google client ID
-            {hasGoogleClient ? "." : ", entered first in "}
+            {t("account.oauthIntro")}
+            {hasGoogleClient ? "." : t("account.oauthEnteredFirst")}
             {!hasGoogleClient && (
               <button type="button" className="text-brand underline" onClick={() => setDialog("settings", "accounts")}>
-                Settings
+                {t("common.settings")}
               </button>
             )}
             {!hasGoogleClient && "."}{" "}
             <button type="button" className="text-brand underline" onClick={() => (setGoogleWay("password"), setError(""))}>
-              Use an app password instead
+              {t("account.useAppPassword")}
             </button>
           </p>
         )}
         {kind !== "google" && (
           <>
-            <ServerRow id="aa-in" title="Incoming server (IMAP)" protocol="imap" value={incoming} onChange={setIncoming} />
-            <ServerRow id="aa-out" title="Outgoing server (SMTP)" optional protocol="smtp" value={outgoing} onChange={setOutgoing} />
-            {insecure && <p className="mt-2 text-xs text-danger">Without encryption your password and mail travel unprotected. Use this only for a test server on your own computer.</p>}
+            <ServerRow id="aa-in" title={t("account.incomingServer")} protocol="imap" value={incoming} onChange={setIncoming} />
+            <ServerRow id="aa-out" title={t("account.outgoingServer")} optional protocol="smtp" value={outgoing} onChange={setOutgoing} />
+            {insecure && <p className="mt-2 text-xs text-danger">{t("account.insecureWarning")}</p>}
             <p className="mt-3 text-xs text-ink3">
-              The password is stored in your system's password store, not in OpenWren's files.
+              {t("account.passwordStored")}
             </p>
           </>
         )}
@@ -267,9 +270,9 @@ export function AddAccount() {
         )}
 
         <div className="mt-4 flex justify-end gap-2">
-          <Button onClick={close}>Cancel</Button>
+          <Button onClick={close}>{t("common.cancel")}</Button>
           <Button variant="primary" type="submit">
-            {busy ? (oauth ? "Waiting for the browser…" : "Checking…") : oauth ? "Sign in with Google" : "Add account"}
+            {busy ? (oauth ? t("account.waitingBrowser") : t("account.checking")) : oauth ? t("account.signInGoogle") : t("accounts.add")}
           </Button>
         </div>
       </form>

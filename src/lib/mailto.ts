@@ -1,5 +1,5 @@
 /**
- * `mailto:` links found in mail open OpenWren's own composer, never another program.
+ * `mailto:` links found in mail open VN Mail's own composer, never another program.
  *
  * The link is written by the sender, so only the parts a person can see and change
  * before sending are taken: who it goes to, who is copied, the subject and the text.

@@ -34,7 +34,7 @@ impl ServerSettings {
     pub fn check_security(&self) -> crate::error::Result<()> {
         if self.security == Security::None && !self.is_on_this_computer() {
             return Err(crate::error::Error(format!(
-                "OpenWren connects to {} only with encryption. \"None (not secure)\" is for a test server on this computer.",
+                "VN Mail connects to {} only with encryption. \"None (not secure)\" is for a test server on this computer.",
                 self.host.trim()
             )));
         }

@@ -15,10 +15,15 @@ export function fontStack(choice: FontChoice, desktop: string): string {
   return `${desktop ? `"${desktop}", ` : ""}system-ui, sans-serif`;
 }
 
-/** Text sizes offered in Settings, in pixels. */
+/** Text sizes offered in Settings, in pixels, with the dictionary key of each label. */
 export const TEXT_SIZES: [string, string][] = [
-  ["14", "Small"],
-  ["15", "Medium"],
-  ["16", "Large"],
-  ["17", "Larger"],
+  ["14", "textSize.small"],
+  ["15", "textSize.medium"],
+  ["16", "textSize.large"],
+  ["17", "textSize.larger"],
 ];
+
+/** The size options with their labels in the current language. */
+export function textSizeOptions(t: (key: string) => string): [string, string][] {
+  return TEXT_SIZES.map(([value, key]) => [value, t(key)]);
+}

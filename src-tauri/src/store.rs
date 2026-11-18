@@ -151,7 +151,7 @@ mod tests {
     const KEY: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
     fn temp_db(name: &str) -> std::path::PathBuf {
-        let path = std::env::temp_dir().join(format!("openwren-{name}-{}.db", std::process::id()));
+        let path = std::env::temp_dir().join(format!("vnmail-{name}-{}.db", std::process::id()));
         let _ = std::fs::remove_file(&path);
         path
     }

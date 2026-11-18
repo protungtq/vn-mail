@@ -1,5 +1,9 @@
 //! The anonymous usage count: at most one small request a day, so the project
-//! can see how many people use OpenWren without knowing who they are.
+//! can see how many people use VN Mail without knowing who they are.
+//!
+//! Disabled in this fork: VN Mail has no usage-count server, so `enabled`
+//! always answers false and nothing is ever sent. The code is kept so the
+//! count can be switched on later by pointing ENDPOINT at a server.
 //!
 //! Nothing is sent unless the user said yes to it. There is no install id.
 //! The request says which version and kind of system it comes from, and
@@ -19,6 +23,7 @@ use serde::Serialize;
 use crate::db;
 use crate::error::Result;
 
+/// Where the count would be sent. Unused while `enabled` answers false.
 pub const ENDPOINT: &str = "https://stats.openwren.app/ping";
 
 /// Exactly what is sent. Field names are short because the server stores only counters.
@@ -54,10 +59,10 @@ fn month(now: DateTime<Utc>) -> String {
     now.format("%Y-%m").to_string()
 }
 
-/// False unless the user chose to be counted; also false when or `OPENWREN_NO_STATS` is set
-/// (tests, CI), or this is a development build.
-pub fn enabled(conn: &Connection) -> bool {
-    !cfg!(debug_assertions) && std::env::var_os("OPENWREN_NO_STATS").is_none() && switched_on(conn) && welcomed(conn)
+/// Always false in this fork: VN Mail has no usage-count server, so the ping
+/// never runs. The setting is kept so the choice survives if counting returns.
+pub fn enabled(_conn: &Connection) -> bool {
+    false
 }
 
 /// False while the welcome screen of a new installation is still open. That screen asks
@@ -180,7 +185,7 @@ fn describe(os_release: &str, exe: &str, appimage: bool, flatpak: bool) -> (Stri
 
 /// Send one request. Failure is silent and simply tried again later.
 pub async fn send(ping: &Ping) -> Result<()> {
-    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(15)).user_agent("OpenWren").build()?;
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(15)).user_agent("VN Mail").build()?;
     let response = client.post(ENDPOINT).json(ping).send().await?;
     if !response.status().is_success() {
         return Err(crate::error::Error(format!("The usage counter answered {}.", response.status())));

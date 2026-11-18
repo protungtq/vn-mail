@@ -3,10 +3,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use openwren_lib::db::{self, Db};
-use openwren_lib::model::{AccountSettings, ImapSettings, Security};
-use openwren_lib::sync::{self, Silent};
-use openwren_lib::{blocked, imap, store};
+use vnmail_lib::db::{self, Db};
+use vnmail_lib::model::{AccountSettings, ImapSettings, Security};
+use vnmail_lib::sync::{self, Silent};
+use vnmail_lib::{blocked, imap, store};
 
 #[tokio::test]
 async fn new_mail_from_a_blocked_sender_goes_to_junk() {
@@ -20,7 +20,7 @@ async fn new_mail_from_a_blocked_sender_goes_to_junk() {
     let db: Db = Arc::new(Mutex::new(store::open_in_memory().unwrap()));
     let account = db::insert_account(&db::lock(&db), &user, "Blocker", "imap", &AccountSettings { imap: Some(settings.clone()), ..Default::default() }).unwrap();
     let mut session = imap::connect(&settings, "pass").await.unwrap();
-    let mail = |from: &str, subject: &str| format!("From: {from}\r\nTo: {user}\r\nSubject: {subject}\r\nMessage-ID: <{subject}@openwren.test>\r\n\r\nHello\r\n");
+    let mail = |from: &str, subject: &str| format!("From: {from}\r\nTo: {user}\r\nSubject: {subject}\r\nMessage-ID: <{subject}@vnmail.test>\r\n\r\nHello\r\n");
 
     // One message so the inbox is not on its first sync (which never files or announces anything).
     session.append("INBOX", None, None, mail("Friend <friend@contoso.example>", "first")).await.unwrap();

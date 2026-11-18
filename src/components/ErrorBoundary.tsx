@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { t } from "../lib/i18n";
 
 /**
  * Catches an error while drawing part of the window, so that part shows a
@@ -24,10 +25,10 @@ export class ErrorBoundary extends Component<{ what: string; resetKey?: unknown;
     if (this.state.error === null) return this.props.children;
     return (
       <section className="flex min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[14px] border border-edge bg-card px-6 text-center text-ink2" role="alert">
-        <p className="text-ink">{this.props.what} could not be shown.</p>
+        <p className="text-ink">{t("errorBoundary.couldNotShow", { what: this.props.what })}</p>
         <p className="selectable max-w-md text-[13px]">{this.state.error}</p>
         <button type="button" className="rounded-full border border-edge px-3 py-1 hover:bg-hover" onClick={() => this.setState({ error: null })}>
-          Try again
+          {t("common.tryAgain")}
         </button>
       </section>
     );

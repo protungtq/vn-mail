@@ -38,7 +38,7 @@ def add(folder, when, sender, subject, text, html=None, attachment=None, headers
     msg["To"] = f"Katy Reid <{user}>"
     msg["Subject"] = subject
     msg["Date"] = format_datetime(when)
-    msg["Message-ID"] = make_msgid(domain="openwren.test")
+    msg["Message-ID"] = make_msgid(domain="vnmail.test")
     for key, value in (headers or {}).items():
         msg[key] = value
     msg.set_content(text)
@@ -108,7 +108,7 @@ if examples:
     # 2. Forged sender: the real company's address, but the mail server could not confirm it. No logo.
     add("INBOX", recent(5), "PayPal <service@paypal.com>", "Example 2: forged sender address",
         "This message claims to come from service@paypal.com, but the sender checks failed.\n\n"
-        "OpenWren warns and shows no PayPal logo.", checks=failed, seen=False)
+        "VN Mail warns and shows no PayPal logo.", checks=failed, seen=False)
 
     # 3. Look-alike address: the first letter is a Cyrillic one. The checks pass, because the
     #    attacker really owns that look-alike name.

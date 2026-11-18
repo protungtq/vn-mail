@@ -2,6 +2,7 @@ import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { backend, errorText } from "../backend";
 import { Button, IconButton } from "../components/ui";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 
 
@@ -10,6 +11,7 @@ import { useStore } from "../store";
  * where a message really came from and which servers handled it.
  */
 export function SourceView({ id }: { id: number }) {
+  const t = useT();
   const showSource = useStore((s) => s.showSource);
   const showToast = useStore((s) => s.showToast);
   const [source, setSource] = useState<string | null>(null);
@@ -38,23 +40,23 @@ export function SourceView({ id }: { id: number }) {
   );
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 p-6" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div role="dialog" aria-modal="true" aria-label="Message source" className="flex h-full max-h-[720px] w-[860px] max-w-full flex-col overflow-hidden rounded-[14px] border border-edge bg-card shadow-xl" onKeyDown={(e) => e.key === "Escape" && close()}>
+      <div role="dialog" aria-modal="true" aria-label={t("source.label")} className="flex h-full max-h-[720px] w-[860px] max-w-full flex-col overflow-hidden rounded-[14px] border border-edge bg-card shadow-xl" onKeyDown={(e) => e.key === "Escape" && close()}>
         <div className="flex flex-none items-center gap-2 border-b border-edge px-4 py-3">
-          <span className="mr-2 text-base">Message source</span>
-          {tab("headers", "Headers")}
-          {tab("all", "Full source")}
+          <span className="mr-2 text-base">{t("source.label")}</span>
+          {tab("headers", t("source.headers"))}
+          {tab("all", t("source.full"))}
           <Button
             className="ml-auto h-8"
             onClick={() =>
               void navigator.clipboard
                 .writeText(shown)
-                .then(() => showToast("Copied"))
-                .catch(() => showToast("Could not copy. Select the text and copy it."))
+                .then(() => showToast(t("toast.copied")))
+                .catch(() => showToast(t("toast.copyFailed")))
             }
           >
-            Copy
+            {t("common.copy")}
           </Button>
-          <IconButton label="Close" onClick={close}>
+          <IconButton label={t("common.close")} onClick={close}>
             <IconX size={20} />
           </IconButton>
         </div>
@@ -63,7 +65,7 @@ export function SourceView({ id }: { id: number }) {
             {error}
           </p>
         ) : source === null ? (
-          <p className="p-4 text-ink2">Fetching the message from the server…</p>
+          <p className="p-4 text-ink2">{t("source.fetching")}</p>
         ) : (
           <pre className="selectable min-h-0 flex-1 overflow-auto px-4 py-3 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-ink" tabIndex={0}>
             {shown}

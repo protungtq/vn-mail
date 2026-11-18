@@ -33,7 +33,7 @@ export interface AppInfo {
   systemFontLight: boolean;
 }
 
-/** A newer version of OpenWren, found by the daily check. */
+/** A newer version of VN Mail, found by the daily check. */
 export interface UpdateAvailable {
   version: string;
   /** One line about the release, or empty. */
@@ -134,7 +134,7 @@ export interface Backend {
   updateStatus(): Promise<UpdateAvailable | null>;
   /** Checks now; null when this version is the newest. */
   checkUpdate(): Promise<UpdateAvailable | null>;
-  /** Downloads and installs the update, then restarts OpenWren. */
+  /** Downloads and installs the update, then restarts VN Mail. */
   installUpdate(): Promise<void>;
   onUpdate(listener: (update: UpdateAvailable | null) => void): Unsubscribe;
   /** Tells the engine the first message list is on screen (used only for start-up timing). */
