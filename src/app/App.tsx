@@ -66,6 +66,7 @@ function onShortcut(e: KeyboardEvent) {
   const key = e.key.toLowerCase();
   if (mod(e) && key === "n") return e.preventDefault(), s.compose();
   if (typing(e.target) || s.draft) return;
+  if (mod(e) && key === "a") return e.preventDefault(), s.selectAll();
   const open = s.detail;
   const ids = s.targets();
   if (mod(e) && e.shiftKey && key === "r") return e.preventDefault(), s.reply("reply-all");

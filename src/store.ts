@@ -111,6 +111,8 @@ interface State {
   prefetch: (id: number) => void;
   /** Open a message. `mode` extends the selection instead (Ctrl- or Shift-click). */
   selectMessage: (id: number, mode?: "single" | "toggle" | "range") => Promise<void>;
+  /** Select every message in the list, as shown. */
+  selectAll: () => void;
   /** Move to the next (1) or previous (-1) message in the list. */
   step: (direction: 1 | -1) => void;
   setQuery: (query: string) => void;
@@ -449,6 +451,11 @@ export const useStore = create<State>((set, get) => {
     },
 
     prefetch: (id) => prefetch([id]),
+
+    selectAll: () => {
+      const order = visible().map((m) => m.id);
+      if (order.length) set({ selected: order });
+    },
 
     selectMessage: async (id, mode = "single") => {
       if (mode === "toggle") {

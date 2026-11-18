@@ -4,7 +4,8 @@
 > (Apache-2.0). The entries below are OpenWren's history, kept as it was.
 > Fork changes so far: renamed to VN Mail (new name, icon and app
 > identifier); the update check and the anonymous usage count disabled,
-> since VN Mail has no server for them yet.
+> since VN Mail has no server for them yet; Ctrl+A (Cmd+A on macOS)
+> selects every message in the list.
 
 ## 0.1.12
 
