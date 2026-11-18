@@ -15,12 +15,13 @@ import { useEffect, useState } from "react";
 import logo from "../../src-tauri/icons/128x128@2x.png";
 import { backend } from "../backend";
 import { REPOSITORY } from "../lib/links";
-import { TEXT_SIZES } from "../lib/font";
+import { textSizeOptions } from "../lib/font";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 import { preferAccountKind } from "./AddAccount";
 import { MOD } from "../lib/keys";
 
-const STEPS = ["Welcome", "Account", "Look", "Ready"] as const;
+const STEPS = ["welcome", "account", "look", "ready"] as const;
 
 /** The filled accent button used only here: the one obvious next step on each screen. */
 function Next({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
@@ -67,6 +68,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
 
 /** A small picture of the app for the right-hand side: three messages, one of them flagged as suspicious. */
 function Preview() {
+  const t = useT();
   const row = "flex items-center gap-3 rounded-2xl bg-card px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.06)]";
   const avatar = "flex size-9 flex-none items-center justify-center rounded-full text-xs";
   return (
@@ -87,7 +89,7 @@ function Preview() {
         <div className="min-w-0 flex-1">
           <div className="text-ink">PayPal Security</div>
           <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-warn px-2.5 py-0.5 text-xs text-on-warn">
-            <IconShieldCheck size={14} /> Sender not confirmed
+            <IconShieldCheck size={14} /> {t("warning.senderNotConfirmed")}
           </div>
         </div>
       </div>
@@ -98,7 +100,7 @@ function Preview() {
         <div className="min-w-0 flex-1">
           <div className="text-ink">Weekly digest</div>
           <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-soft px-2.5 py-0.5 text-xs text-brand">
-            <IconEyeOff size={14} /> 2 trackers removed
+            <IconEyeOff size={14} /> {t("onboarding.previewTrackers", { count: 2 })}
           </div>
         </div>
       </div>
@@ -108,6 +110,7 @@ function Preview() {
 
 /** First-run welcome: what VN Mail is, add an account, pick the look, start. */
 export function Onboarding() {
+  const t = useT();
   const accounts = useStore((s) => s.accounts);
   const settings = useStore((s) => s.settings);
   const { setSetting, setDialog, setWelcome } = useStore.getState();
@@ -130,13 +133,13 @@ export function Onboarding() {
   const card = "flex w-full items-center gap-4 rounded-2xl border border-edge px-5 py-4 text-left hover:border-line hover:bg-hover";
 
   return (
-    <div className="absolute inset-0 z-[5] flex bg-card" role="dialog" aria-modal="true" aria-label="Welcome to VN Mail">
+    <div className="absolute inset-0 z-[5] flex bg-card" role="dialog" aria-modal="true" aria-label={t("onboarding.dialogLabel")}>
       <div className="flex min-w-0 flex-1 flex-col px-14 py-10">
         <div className="flex items-center gap-2.5">
           <img src={logo} alt="" className="size-8" />
           <span className="text-lg text-ink">VN Mail</span>
           <button type="button" onClick={finish} className="ml-auto rounded-lg px-3 py-1.5 text-ink3 hover:bg-hover hover:text-ink">
-            Skip
+            {t("onboarding.skip")}
           </button>
         </div>
 
@@ -145,22 +148,22 @@ export function Onboarding() {
           <div className="my-auto max-w-[460px]">
             {step === 0 && (
               <>
-                <h1 className="text-[34px] leading-tight text-ink">Mail that stays yours</h1>
-                <p className="mt-3 text-[17px] text-ink2">VN Mail is an open-source mail app for Gmail and any other mail account. It keeps your mail on this computer and tells no one what you read.</p>
+                <h1 className="text-[34px] leading-tight text-ink">{t("onboarding.title1")}</h1>
+                <p className="mt-3 text-[17px] text-ink2">{t("onboarding.intro1")}</p>
                 <div className="mt-8 flex flex-col gap-5">
-                  <Point icon={<IconLock size={20} />} title="Private by design" text="Your mail is stored encrypted on this computer. No tracking, no ads." />
-                  <Point icon={<IconShieldCheck size={20} />} title="Watches your back" text="Trackers are removed and suspicious messages are flagged before you click." />
-                  <Point icon={<IconMail size={20} />} title="All your mail in one place" text="Several accounts, one inbox, and search that reaches back years." />
+                  <Point icon={<IconLock size={20} />} title={t("onboarding.privateTitle")} text={t("onboarding.privateText")} />
+                  <Point icon={<IconShieldCheck size={20} />} title={t("onboarding.watchTitle")} text={t("onboarding.watchText")} />
+                  <Point icon={<IconMail size={20} />} title={t("onboarding.allMailTitle")} text={t("onboarding.allMailText")} />
                   <div className="flex gap-3.5">
                     <div className="flex size-10 flex-none items-center justify-center rounded-xl bg-soft text-brand">
                       <IconCode size={20} />
                     </div>
                     <div>
-                      <div className="text-ink">Free and open source</div>
+                      <div className="text-ink">{t("onboarding.freeTitle")}</div>
                       <div className="text-ink2">
-                        No price, no ads. Every line of code is public, so you can check it yourself.{" "}
+                        {t("onboarding.freeText")}{" "}
                         <button type="button" className="text-brand underline" onClick={() => void backend.openLink(REPOSITORY)}>
-                          View the code
+                          {t("onboarding.viewCode")}
                         </button>
                       </div>
                     </div>
@@ -171,11 +174,11 @@ export function Onboarding() {
 
             {step === 1 && (
               <>
-                <h1 className="text-[30px] leading-tight text-ink">Add your mail account</h1>
-                <p className="mt-3 text-ink2">Your password or sign-in is kept in your system's password store, never in VN Mail's files.</p>
+                <h1 className="text-[30px] leading-tight text-ink">{t("onboarding.title2")}</h1>
+                <p className="mt-3 text-ink2">{t("onboarding.accountNote")}</p>
                 {accounts.length > 0 && (
                   <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-soft px-3 py-1 text-brand">
-                    <IconCheck size={16} /> {accounts.length === 1 ? accounts[0].address : `${accounts.length} accounts`} added
+                    <IconCheck size={16} /> {accounts.length === 1 ? t("onboarding.addedOne", { address: accounts[0].address }) : t("onboarding.addedMany", { count: accounts.length })}
                   </p>
                 )}
                 <div className="mt-6 flex flex-col gap-3">
@@ -185,7 +188,7 @@ export function Onboarding() {
                     </span>
                     <span>
                       <span className="block text-ink">Gmail</span>
-                      <span className="block text-ink2">With an app password from your Google account</span>
+                      <span className="block text-ink2">{t("onboarding.gmailWay")}</span>
                     </span>
                     <IconArrowRight size={18} className="ml-auto text-ink3" />
                   </button>
@@ -194,8 +197,8 @@ export function Onboarding() {
                       <IconMail size={22} />
                     </span>
                     <span>
-                      <span className="block text-ink">Other mail account</span>
-                      <span className="block text-ink2">Any provider, with your address and password (IMAP)</span>
+                      <span className="block text-ink">{t("onboarding.otherAccount")}</span>
+                      <span className="block text-ink2">{t("onboarding.otherWay")}</span>
                     </span>
                     <IconArrowRight size={18} className="ml-auto text-ink3" />
                   </button>
@@ -205,22 +208,22 @@ export function Onboarding() {
 
             {step === 2 && (
               <>
-                <h1 className="text-[30px] leading-tight text-ink">Make it yours</h1>
-                <p className="mt-3 text-ink2">You can change all of this later in Settings.</p>
+                <h1 className="text-[30px] leading-tight text-ink">{t("onboarding.title3")}</h1>
+                <p className="mt-3 text-ink2">{t("onboarding.changeLater")}</p>
                 <div className="mt-7 flex flex-col gap-6">
                   <Choice
-                    label="Theme"
+                    label={t("settings.theme")}
                     value={(settings.theme ?? "system") as "system" | "light" | "dark"}
                     onChange={(v) => void setSetting("theme", v)}
                     options={[
-                      ["system", "Match my computer"],
-                      ["light", "Light"],
-                      ["dark", "Dark"],
+                      ["system", t("onboarding.matchComputer")],
+                      ["light", t("settings.themeLight")],
+                      ["dark", t("settings.themeDark")],
                     ]}
                   />
-                  <Choice label="Text size" value={settings.text_size ?? "15"} onChange={(v) => void setSetting("text_size", v)} options={TEXT_SIZES} />
+                  <Choice label={t("settings.textSize")} value={settings.text_size ?? "15"} onChange={(v) => void setSetting("text_size", v)} options={textSizeOptions(t)} />
                   <Choice
-                    label="Time"
+                    label={t("onboarding.timeLabel")}
                     value={settings.time_format === "12" ? "12" : "24"}
                     onChange={(v) => void setSetting("time_format", v)}
                     options={[
@@ -237,15 +240,15 @@ export function Onboarding() {
                 <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-soft text-brand">
                   <IconCheck size={30} />
                 </div>
-                <h1 className="text-[30px] leading-tight text-ink">You're all set</h1>
+                <h1 className="text-[30px] leading-tight text-ink">{t("onboarding.title4")}</h1>
                 <p className="mt-3 text-ink2">
-                  {accounts.length > 0 ? "Your mail is downloading in the background. The newest messages appear first; older ones follow." : "Add an account any time from Settings, under Accounts."}
+                  {accounts.length > 0 ? t("onboarding.downloading") : t("onboarding.addLater")}
                 </p>
                 <div className="mt-7 flex flex-col gap-2.5 text-ink2">
                   {[
-                    [`${MOD} K`, "Search all your mail"],
-                    [`${MOD} N`, "Write a new message"],
-                    ["Right-click", "Block a sender, snooze, move or view the source"],
+                    [`${MOD} K`, t("onboarding.shortcutSearch")],
+                    [`${MOD} N`, t("onboarding.shortcutNew")],
+                    [t("onboarding.rightClick"), t("onboarding.shortcutMenu")],
                   ].map(([keys, what]) => (
                     <div key={keys} className="flex items-center gap-3">
                       <kbd className="min-w-[92px] rounded-lg border border-edge bg-canvas px-2.5 py-1 text-center text-[13px] text-ink">{keys}</kbd>
@@ -258,16 +261,16 @@ export function Onboarding() {
                     <IconHeart size={20} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-ink">VN Mail is free and open source.</div>
+                    <div className="text-ink">{t("about.freeTitle")}</div>
                     <div className="mt-1 text-[13px] text-ink2">
-                      No ads and no data to sell. VN Mail is a fork of OpenWren; the code is public, and bug reports and fixes are welcome.
+                      {t("about.freeText")}
                     </div>
                     <button
                       type="button"
                       onClick={() => void backend.openLink(REPOSITORY)}
                       className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg border border-edge px-3.5 text-[14px] text-ink hover:bg-hover"
                     >
-                      <IconHeart size={16} className="text-danger" /> View on GitHub
+                      <IconHeart size={16} className="text-danger" /> {t("about.viewGithub")}
                     </button>
                   </div>
                 </div>
@@ -279,31 +282,31 @@ export function Onboarding() {
         <div className="flex flex-none items-center gap-4">
           {step > 0 && (
             <button type="button" onClick={() => setStep(step - 1)} className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-ink2 hover:bg-hover">
-              <IconArrowLeft size={18} /> Back
+              <IconArrowLeft size={18} /> {t("onboarding.back")}
             </button>
           )}
           {step === 0 && (
             <Next onClick={() => setStep(1)}>
-              Get started <IconArrowRight size={18} />
+              {t("onboarding.getStarted")} <IconArrowRight size={18} />
             </Next>
           )}
           {step === 1 &&
             (accounts.length > 0 ? (
               <Next onClick={() => setStep(2)}>
-                Continue <IconArrowRight size={18} />
+                {t("onboarding.continue")} <IconArrowRight size={18} />
               </Next>
             ) : (
               <button type="button" onClick={() => setStep(2)} className="h-11 rounded-xl px-3 text-ink2 hover:bg-hover">
-                Do this later
+                {t("onboarding.later")}
               </button>
             ))}
           {step === 2 && (
             <Next onClick={() => setStep(3)}>
-              Continue <IconArrowRight size={18} />
+              {t("onboarding.continue")} <IconArrowRight size={18} />
             </Next>
           )}
-          {step === 3 && <Next onClick={finish}>Open my inbox</Next>}
-          <div className="ml-auto flex items-center gap-2" aria-label={`Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`}>
+          {step === 3 && <Next onClick={finish}>{t("onboarding.openInbox")}</Next>}
+          <div className="ml-auto flex items-center gap-2" aria-label={t("onboarding.stepLabel", { step: step + 1, total: STEPS.length, name: t(`onboarding.step.${STEPS[step]}`) })}>
             {STEPS.map((name, i) => (
               <span key={name} className={`h-1.5 rounded-full ${i === step ? "w-6 bg-brand" : "w-1.5 bg-edge"}`} />
             ))}

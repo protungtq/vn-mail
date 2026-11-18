@@ -1,5 +1,6 @@
 import { getDomain, getDomainWithoutSuffix, getPublicSuffix } from "tldts";
 import { domainOf } from "./brands";
+import { t } from "./i18n";
 import { impersonated, skeleton } from "./impersonated";
 
 /**
@@ -50,7 +51,9 @@ export function authProblem(auth: string | null | undefined, server: string | nu
   const failed = (["dmarc", "dkim", "spf"] as const).filter((method) => result[method] === "fail").map((m) => m.toUpperCase());
   // DMARC is the verdict. Without one, a failed signature or a refused sending server counts.
   if (result.dmarc === "fail" || (result.dmarc === undefined && failed.length > 0)) {
-    return `Your mail server could not confirm who sent this (${failed.length > 2 ? `${failed.slice(0, -1).join(", ")} and ${failed[failed.length - 1]}` : failed.join(" and ")} failed). The sender's address may be forged.`;
+    const and = t("privacy.listAnd");
+    const joined = failed.length > 2 ? `${failed.slice(0, -1).join(", ")}${and}${failed[failed.length - 1]}` : failed.join(and);
+    return t("privacy.authFailed", { failed: joined });
   }
   return null;
 }
@@ -177,18 +180,18 @@ export function nameProblem(name: string, address: string): string | null {
   const domain = registrable(domainOf(address));
   if (!domain.includes(".")) return null;
   if (lookAlike(domainOf(address))) {
-    return `The sender's address ${readableHost(domainOf(address))} contains letters from another alphabet that look like ordinary ones. This is a common way to imitate a known address.`;
+    return t("privacy.lookAlikeAddress", { address: readableHost(domainOf(address)) });
   }
   const imitated = imitatedDomain(domain);
   if (imitated) {
-    return `The sender's address ${domain} looks like ${imitated} but is a different address. This is a common way to imitate a known address.`;
+    return t("privacy.imitatedDomain", { domain, imitated });
   }
   const shown = name.match(/[\w.+-]+@([a-z0-9-]+\.)+[a-z]{2,}/i)?.[0];
   if (shown && registrable(domainOf(shown)) !== domain) {
-    return `The sender's name shows the address ${shown}, but this message came from ${address}.`;
+    return t("privacy.shownAddress", { shown, address });
   }
   const brand = claimedBrand(name, domain);
-  if (brand) return `The sender's name says "${brand}", but the address ${address} does not belong to ${brand}.`;
+  if (brand) return t("privacy.claimedBrand", { brand, address });
   return null;
 }
 

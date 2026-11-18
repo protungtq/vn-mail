@@ -16,6 +16,7 @@ const PERSONAL = /@(gmail|googlemail|outlook|hotmail|live|msn|yahoo|ymail|icloud
 import { backend, errorText } from "../backend";
 import { categories } from "../components/ui";
 import type { MenuItem } from "../components/ui";
+import { t } from "../lib/i18n";
 import { useStore } from "../store";
 import type { MessageSummary } from "../types";
 
@@ -29,9 +30,9 @@ export function snoozeTimes(now = new Date()): { label: string; at: number }[] {
   const monday = new Date(tomorrow);
   while (monday.getDay() !== 1) monday.setDate(monday.getDate() + 1);
   return [
-    { label: "In 3 hours", at: at(later) },
-    { label: "Tomorrow at 8:00", at: at(tomorrow) },
-    { label: "Monday at 8:00", at: at(monday) },
+    { label: t("snooze.in3Hours"), at: at(later) },
+    { label: t("snooze.tomorrow8"), at: at(tomorrow) },
+    { label: t("snooze.monday8"), at: at(monday) },
   ];
 }
 
@@ -49,11 +50,11 @@ export function moveItems(m: MessageSummary): MenuAction[] {
 export function categoryItems(m: MessageSummary): MenuItem[] {
   const { setCategories } = useStore.getState();
   const items: MenuItem[] = Object.keys(categories).map((name) => ({
-    label: name,
+    label: t(`category.${name}`),
     checked: m.categories.includes(name),
     onSelect: () => void setCategories(m.id, m.categories.includes(name) ? m.categories.filter((c) => c !== name) : [...m.categories, name]),
   }));
-  if (m.categories.length > 0) items.push("divider", { label: "Clear categories", onSelect: () => void setCategories(m.id, []) });
+  if (m.categories.length > 0) items.push("divider", { label: t("actions.clearCategories"), onSelect: () => void setCategories(m.id, []) });
   return items;
 }
 
@@ -70,29 +71,29 @@ export function messageMenu(m: MessageSummary): MenuItem[] {
   const save = () =>
     void backend
       .saveMessage(m.id, `${(m.subject || "message").replace(/[^\w .-]+/g, "_").slice(0, 60)}.eml`)
-      .then((saved) => saved && s.showToast("Message saved"))
+      .then((saved) => saved && s.showToast(t("toast.messageSaved")))
       .catch((e) => s.showToast(errorText(e)));
   const items: MenuItem[] = [
-    { label: "Archive", icon: <IconArchive size={16} />, onSelect: () => void s.moveMessages(ids, { role: "archive" }) },
-    { label: "Delete", icon: <IconTrash size={16} />, onSelect: () => void s.deleteMessages(ids), danger: true },
-    { label: "Move to inbox", icon: <IconInbox size={16} />, onSelect: () => void s.moveMessages(ids, { role: "inbox" }) },
-    { label: "Mark as junk", icon: <IconFolderShare size={16} />, onSelect: () => void s.moveMessages(ids, { role: "junk" }) },
+    { label: t("actions.archive"), icon: <IconArchive size={16} />, onSelect: () => void s.moveMessages(ids, { role: "archive" }) },
+    { label: t("actions.delete"), icon: <IconTrash size={16} />, onSelect: () => void s.deleteMessages(ids), danger: true },
+    { label: t("actions.moveToInbox"), icon: <IconInbox size={16} />, onSelect: () => void s.moveMessages(ids, { role: "inbox" }) },
+    { label: t("actions.markJunk"), icon: <IconFolderShare size={16} />, onSelect: () => void s.moveMessages(ids, { role: "junk" }) },
     "divider",
-    { label: m.unread ? "Mark as read" : "Mark as unread", icon: <IconMailOpened size={16} />, onSelect: () => ids.forEach((id) => void s.setFlags(id, { unread: !m.unread })) },
-    { label: m.flagged ? "Remove flag" : "Flag", icon: <IconFlag size={16} />, onSelect: () => ids.forEach((id) => void s.setFlags(id, { flagged: !m.flagged })) },
+    { label: m.unread ? t("actions.markRead") : t("actions.markUnread"), icon: <IconMailOpened size={16} />, onSelect: () => ids.forEach((id) => void s.setFlags(id, { unread: !m.unread })) },
+    { label: m.flagged ? t("actions.removeFlag") : t("actions.flag"), icon: <IconFlag size={16} />, onSelect: () => ids.forEach((id) => void s.setFlags(id, { flagged: !m.flagged })) },
   ];
   if (many) return items;
   return [
     ...items,
-    { label: m.pinned ? "Unpin" : "Pin", icon: <IconPin size={16} />, onSelect: () => void s.setFlags(m.id, { pinned: !m.pinned }) },
-    { label: "Snooze until tomorrow", icon: <IconClock size={16} />, onSelect: () => void s.snooze(m.id, snoozeTimes()[1].at) },
+    { label: m.pinned ? t("actions.unpin") : t("actions.pin"), icon: <IconPin size={16} />, onSelect: () => void s.setFlags(m.id, { pinned: !m.pinned }) },
+    { label: t("actions.snoozeTomorrow"), icon: <IconClock size={16} />, onSelect: () => void s.snooze(m.id, snoozeTimes()[1].at) },
     "divider",
-    { label: "Sweep: delete all from this sender", icon: <IconSparkles size={16} />, onSelect: () => void s.sweep(m.id), danger: true },
-    ...(s.settings.focused_inbox !== "off" ? [{ label: m.focused ? "Always move sender to Other" : "Always move sender to Focused", onSelect: () => void s.setSenderFocus(m.id, !m.focused) }] : []),
-    { label: "Block sender", icon: <IconBan size={16} />, onSelect: () => void s.blockSender(m.id, false), danger: true },
+    { label: t("actions.sweep"), icon: <IconSparkles size={16} />, onSelect: () => void s.sweep(m.id), danger: true },
+    ...(s.settings.focused_inbox !== "off" ? [{ label: m.focused ? t("actions.senderToOther") : t("actions.senderToFocused"), onSelect: () => void s.setSenderFocus(m.id, !m.focused) }] : []),
+    { label: t("actions.blockSender"), icon: <IconBan size={16} />, onSelect: () => void s.blockSender(m.id, false), danger: true },
     // Blocking a whole domain makes no sense for addresses that millions of people share.
-    ...(PERSONAL.test(m.fromAddress) ? [] : [{ label: `Block everyone at ${m.fromAddress.split("@").pop()}`, icon: <IconBan size={16} />, onSelect: () => void s.blockSender(m.id, true), danger: true }]),
-    { label: "View source", icon: <IconCode size={16} />, onSelect: () => s.showSource(m.id) },
-    { label: "Save as file…", icon: <IconDeviceFloppy size={16} />, onSelect: save },
+    ...(PERSONAL.test(m.fromAddress) ? [] : [{ label: t("actions.blockDomain", { domain: m.fromAddress.split("@").pop() ?? "" }), icon: <IconBan size={16} />, onSelect: () => void s.blockSender(m.id, true), danger: true }]),
+    { label: t("actions.viewSource"), icon: <IconCode size={16} />, onSelect: () => s.showSource(m.id) },
+    { label: t("actions.saveAsFile"), icon: <IconDeviceFloppy size={16} />, onSelect: save },
   ];
 }

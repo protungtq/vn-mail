@@ -2,6 +2,7 @@ import { IconBold, IconItalic, IconLink, IconList, IconListNumbers, IconUnderlin
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import type { ReactNode } from "react";
+import { useT } from "../lib/useT";
 
 interface Props {
   /** Starting content. Change `key` on the component to load different content. */
@@ -33,6 +34,7 @@ function Tool({ label, active, onClick, children }: { label: string; active: boo
 
 /** Rich-text editor for the composer and the signature editor. */
 export function RichText({ initial, onChange, label, autoFocus, className = "", toolbarEnd }: Props) {
+  const t = useT();
   const editor = useEditor({
     extensions: [StarterKit.configure({ link: { openOnClick: false } })],
     content: initial,
@@ -45,29 +47,29 @@ export function RichText({ initial, onChange, label, autoFocus, className = "", 
 
   function link() {
     if (editor!.isActive("link")) return chain().unsetLink().run();
-    const url = window.prompt("Link address", "https://");
+    const url = window.prompt(t("editor.linkAddress"), "https://");
     if (url && /^(https?:|mailto:)/i.test(url)) chain().setLink({ href: url }).run();
   }
 
   return (
     <div className={`flex min-h-0 flex-col ${className}`}>
-      <div className="mb-2 flex flex-none flex-wrap items-center gap-1 rounded-[10px] bg-canvas px-2 py-1" role="toolbar" aria-label="Formatting">
-        <Tool label="Bold" active={editor.isActive("bold")} onClick={() => chain().toggleBold().run()}>
+      <div className="mb-2 flex flex-none flex-wrap items-center gap-1 rounded-[10px] bg-canvas px-2 py-1" role="toolbar" aria-label={t("editor.formatting")}>
+        <Tool label={t("editor.bold")} active={editor.isActive("bold")} onClick={() => chain().toggleBold().run()}>
           <IconBold size={17} />
         </Tool>
-        <Tool label="Italic" active={editor.isActive("italic")} onClick={() => chain().toggleItalic().run()}>
+        <Tool label={t("editor.italic")} active={editor.isActive("italic")} onClick={() => chain().toggleItalic().run()}>
           <IconItalic size={17} />
         </Tool>
-        <Tool label="Underline" active={editor.isActive("underline")} onClick={() => chain().toggleUnderline().run()}>
+        <Tool label={t("editor.underline")} active={editor.isActive("underline")} onClick={() => chain().toggleUnderline().run()}>
           <IconUnderline size={17} />
         </Tool>
-        <Tool label="Bulleted list" active={editor.isActive("bulletList")} onClick={() => chain().toggleBulletList().run()}>
+        <Tool label={t("editor.bulletList")} active={editor.isActive("bulletList")} onClick={() => chain().toggleBulletList().run()}>
           <IconList size={17} />
         </Tool>
-        <Tool label="Numbered list" active={editor.isActive("orderedList")} onClick={() => chain().toggleOrderedList().run()}>
+        <Tool label={t("editor.numberedList")} active={editor.isActive("orderedList")} onClick={() => chain().toggleOrderedList().run()}>
           <IconListNumbers size={17} />
         </Tool>
-        <Tool label="Link" active={editor.isActive("link")} onClick={link}>
+        <Tool label={t("editor.link")} active={editor.isActive("link")} onClick={link}>
           <IconLink size={17} />
         </Tool>
         {toolbarEnd && <div className="ml-auto flex items-center gap-2">{toolbarEnd}</div>}

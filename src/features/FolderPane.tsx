@@ -19,6 +19,8 @@ import {
 import { useEffect, useState } from "react";
 import logo from "../../src-tauri/icons/128x128.png";
 import { Button, ContextMenu } from "../components/ui";
+import { getLanguage, t } from "../lib/i18n";
+import { useT } from "../lib/useT";
 import { ALL_INBOXES, allInboxes, useStore } from "../store";
 import { DRAG_TYPE } from "./MessageList";
 import type { Folder, FolderRole, Progress } from "../types";
@@ -35,6 +37,7 @@ const icons: Record<FolderRole, typeof IconInbox> = {
 
 /** One folder. `label` replaces its name where that alone would be unclear (the pinned ones at the top). */
 function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; pinned?: boolean }) {
+  const t = useT();
   const selected = useStore((s) => s.folderId === folder.id && !s.query.trim());
   const selectFolder = useStore((s) => s.selectFolder);
   const moveMessages = useStore((s) => s.moveMessages);
@@ -47,7 +50,7 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
   const real = folder.id !== ALL_INBOXES;
   // A favourite shown at the top wears a star, so it is not mistaken for the folder in its account.
   const Icon = pinned && real ? IconStar : icons[folder.role];
-  const starLabel = folder.favorite ? "Remove from Favorites" : "Add to Favorites";
+  const starLabel = folder.favorite ? t("folders.removeFavorite") : t("folders.addFavorite");
   return (
     <>
       <button
@@ -70,7 +73,7 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
           e.preventDefault();
           setOver(false);
           const { ids, accountId } = JSON.parse(e.dataTransfer.getData(DRAG_TYPE)) as { ids: number[]; accountId: number };
-          if (accountId !== folder.accountId) showToast("Messages can only be moved within their own account.");
+          if (accountId !== folder.accountId) showToast(t("toast.moveSameAccount"));
           else void moveMessages(ids, { folderId: folder.id });
         }}
         className={`flex w-full flex-none items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ${over ? "bg-soft text-ink" : selected ? "bg-sel text-ink" : "text-ink2 hover:bg-hover"}`}
@@ -84,7 +87,7 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
           x={menu.x}
           y={menu.y}
           items={[
-            { label: "Mark all as read", icon: <IconMailOpened size={16} />, onSelect: () => void markFolderRead(folder) },
+            { label: t("folders.markAllRead"), icon: <IconMailOpened size={16} />, onSelect: () => void markFolderRead(folder) },
             ...(real ? [{ label: starLabel, icon: <IconStar size={16} />, onSelect: () => void toggleFavorite(folder) }] : []),
           ]}
           onClose={() => setMenu(null)}
@@ -96,6 +99,7 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
 
 /** An account: its address as a quiet label, its standard folders, and the rest behind "More". */
 function AccountFolders({ address, folders }: { address: string; folders: Folder[] }) {
+  const t = useT();
   const selectedId = useStore((s) => s.folderId);
   const main = folders.filter((f) => f.role !== "custom");
   const extra = folders.filter((f) => f.role === "custom");
@@ -113,7 +117,7 @@ function AccountFolders({ address, folders }: { address: string; folders: Folder
       {extra.length > 0 && (
         <button type="button" onClick={() => setOpen(!shown)} aria-expanded={shown} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-ink2 hover:bg-hover">
           <IconDots size={18} stroke={1.6} className="flex-none" />
-          {shown ? "Less" : "More"}
+          {shown ? t("folders.less") : t("folders.more")}
         </button>
       )}
       {shown && extra.map((f) => <FolderRow key={f.id} folder={f} />)}
@@ -124,15 +128,16 @@ function AccountFolders({ address, folders }: { address: string; folders: Folder
 /** One line describing what sync is doing for an account. */
 export function statusText(p: Progress | undefined): string {
   if (!p) return "";
+  const locale = getLanguage() === "vi" ? "vi-VN" : "en-US";
   switch (p.phase) {
     case "folders":
-      return "Checking folders…";
+      return t("sync.checkingFolders");
     case "headers":
-      return `Syncing ${p.message}: ${p.done.toLocaleString()} of ${p.total.toLocaleString()}`;
+      return t("sync.syncing", { message: p.message, done: p.done.toLocaleString(locale), total: p.total.toLocaleString(locale) });
     case "bodies":
-      return `Downloading mail text: ${p.done.toLocaleString()} of ${p.total.toLocaleString()}`;
+      return t("sync.downloading", { done: p.done.toLocaleString(locale), total: p.total.toLocaleString(locale) });
     case "idle":
-      return "Up to date";
+      return t("sync.upToDate");
     case "error":
       return p.message;
   }
@@ -140,6 +145,7 @@ export function statusText(p: Progress | undefined): string {
 
 /** Shown above the sync line when a newer version exists. Opens Settings, About. */
 function UpdateNotice() {
+  const t = useT();
   const update = useStore((s) => s.update);
   const setDialog = useStore((s) => s.setDialog);
   if (!update) return null;
@@ -147,17 +153,18 @@ function UpdateNotice() {
     <button
       type="button"
       onClick={() => setDialog("settings", "about")}
-      title={`VN Mail ${update.version} is available`}
+      title={t("update.availableTitle", { version: update.version })}
       className="mt-1 flex w-full flex-none items-center gap-2 rounded-lg bg-brand/10 px-2.5 py-2 text-left text-xs font-medium text-brand hover:bg-brand/15"
     >
       <IconArrowUpCircle size={16} stroke={1.8} className="flex-none" />
-      <span className="truncate">Update available: {update.version}</span>
+      <span className="truncate">{t("update.available", { version: update.version })}</span>
     </button>
   );
 }
 
 /** The line at the bottom of the sidebar: what sync is doing. Clicking it shows every account's state. */
 function SyncStatus() {
+  const t = useT();
   const syncNow = useStore((s) => s.syncNow);
   const setDialog = useStore((s) => s.setDialog);
   const accounts = useStore((s) => s.accounts);
@@ -173,7 +180,7 @@ function SyncStatus() {
   const all = accounts.flatMap((a) => (progress[a.id] ? [progress[a.id]] : []));
   const failed = all.find((p) => p.phase === "error");
   const busy = all.find((p) => p.phase !== "idle" && p.phase !== "error");
-  const text = failed ? statusText(failed) : busy ? statusText(busy) : "Up to date";
+  const text = failed ? statusText(failed) : busy ? statusText(busy) : t("sync.upToDate");
   const Icon = failed ? IconAlertCircle : busy ? IconRefresh : IconCircleCheck;
   return (
     <>
@@ -185,7 +192,7 @@ function SyncStatus() {
           const box = e.currentTarget.getBoundingClientRect();
           setOpen({ left: box.left, bottom: window.innerHeight - box.top + 4 });
         }}
-        title={`${text}. Click to see each account.`}
+        title={t("sync.clickForAccounts", { text })}
         className={`flex w-full flex-none items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-hover mt-1 ${failed ? "text-danger" : "text-ink3"}`}
       >
         <Icon size={16} stroke={1.6} className={`flex-none ${busy && !failed ? "animate-spin" : ""}`} />
@@ -197,13 +204,13 @@ function SyncStatus() {
         <div className="fixed inset-0 z-30" onMouseDown={() => setOpen(null)}>
           <div
             role="dialog"
-            aria-label="Sync status"
+            aria-label={t("sync.status")}
             className="fixed z-30 w-[340px] max-w-[calc(100vw-16px)] rounded-[10px] border border-edge bg-card p-3 shadow-lg"
             style={open}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="mb-2 font-semibold text-ink">Sync status</div>
-            {accounts.length === 0 && <p className="text-[13px] text-ink2">No accounts yet.</p>}
+            <div className="mb-2 font-semibold text-ink">{t("sync.status")}</div>
+            {accounts.length === 0 && <p className="text-[13px] text-ink2">{t("accounts.none")}</p>}
             {accounts.map((a) => {
               const p = progress[a.id];
               const bad = p?.phase === "error";
@@ -213,14 +220,14 @@ function SyncStatus() {
                   <Mark size={16} stroke={1.6} className={`mt-0.5 flex-none ${bad ? "text-danger" : "text-ink3"}`} />
                   <div className="min-w-0 flex-1">
                     <div className="selectable truncate text-[13px] text-ink">{a.address}</div>
-                    <div className={`selectable text-xs break-words ${bad ? "text-danger" : "text-ink2"}`}>{statusText(p) || "Waiting…"}</div>
+                    <div className={`selectable text-xs break-words ${bad ? "text-danger" : "text-ink2"}`}>{statusText(p) || t("sync.waiting")}</div>
                   </div>
                 </div>
               );
             })}
             <div className="mt-3 flex gap-2">
               <Button className="h-8" onClick={syncNow}>
-                Sync now
+                {t("sync.now")}
               </Button>
               {failed && (
                 <Button
@@ -230,7 +237,7 @@ function SyncStatus() {
                     setDialog("settings", "accounts");
                   }}
                 >
-                  Account settings
+                  {t("sync.accountSettings")}
                 </Button>
               )}
             </div>
@@ -243,16 +250,18 @@ function SyncStatus() {
 
 /** In the header beside Settings: checks every account for new mail now. Turns while a check runs. */
 function RefreshButton() {
+  const t = useT();
   const syncNow = useStore((s) => s.syncNow);
   const busy = useStore((s) => Object.values(s.progress).some((p) => p.phase !== "idle" && p.phase !== "error"));
   return (
-    <button type="button" aria-label="Check for new mail" title="Check for new mail" onClick={syncNow} className="ml-auto rounded-lg p-1.5 text-ink3 hover:bg-hover hover:text-ink">
+    <button type="button" aria-label={t("sync.checkNew")} title={t("sync.checkNew")} onClick={syncNow} className="ml-auto rounded-lg p-1.5 text-ink3 hover:bg-hover hover:text-ink">
       <IconRefresh size={18} stroke={1.6} className={busy ? "animate-spin" : ""} />
     </button>
   );
 }
 
 export function FolderPane({ width }: { width: number }) {
+  const t = useT();
   const compose = useStore((s) => s.compose);
   const accounts = useStore((s) => s.accounts);
   const folders = useStore((s) => s.folders);
@@ -261,18 +270,18 @@ export function FolderPane({ width }: { width: number }) {
   // With several accounts, a folder name alone does not say whose it is.
   const owner = (f: Folder) => (accounts.length > 1 ? `${f.name} · ${accounts.find((a) => a.id === f.accountId)?.address ?? ""}` : undefined);
   return (
-    <nav className="flex flex-none flex-col bg-card px-2.5 pt-3.5 pb-2" style={{ width }} aria-label="Folders">
+    <nav className="flex flex-none flex-col bg-card px-2.5 pt-3.5 pb-2" style={{ width }} aria-label={t("folders.label")}>
       <div className="mb-3 flex flex-none items-center gap-2 pr-0.5 pl-2">
         <img src={logo} alt="" className="size-[22px]" />
         <span className="truncate text-[17px] text-ink">VN Mail</span>
         <RefreshButton />
-        <button type="button" aria-label="Settings" title="Settings" onClick={() => setDialog("settings")} className="rounded-lg p-1.5 text-ink3 hover:bg-hover hover:text-ink">
+        <button type="button" aria-label={t("common.settings")} title={t("common.settings")} onClick={() => setDialog("settings")} className="rounded-lg p-1.5 text-ink3 hover:bg-hover hover:text-ink">
           <IconSettings size={18} stroke={1.6} />
         </button>
       </div>
       <button type="button" onClick={() => compose()} className="mb-3 flex h-10 w-full flex-none items-center justify-center gap-2 rounded-[10px] bg-soft text-brand hover:brightness-[0.97]">
         <IconPencil size={18} stroke={1.6} />
-        New mail
+        {t("common.newMail")}
       </button>
       {/* Only the folders scroll: the header above and the sync line below stay in place. */}
       <div className="-mx-2.5 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2.5">
@@ -286,7 +295,7 @@ export function FolderPane({ width }: { width: number }) {
       {accounts.length === 0 && (
         <button type="button" onClick={() => setDialog("add-account")} className="mt-2 flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-brand hover:bg-hover">
           <IconPlus size={18} stroke={1.6} />
-          Add account
+          {t("accounts.add")}
         </button>
       )}
       </div>

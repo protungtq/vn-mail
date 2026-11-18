@@ -3,6 +3,7 @@ import nunitoFile from "@fontsource-variable/nunito/files/nunito-latin-wght-norm
 import { useMemo, useRef, useState } from "react";
 import { Button } from "../components/ui";
 import { fontChoice, fontStack } from "../lib/font";
+import { useT } from "../lib/useT";
 import { useStore } from "../store";
 
 /** Senders whose pictures are always shown, as kept in the "image_senders" setting. */
@@ -26,6 +27,7 @@ export function imageSenders(setting: string | undefined): string[] {
  */
 /** `confirmed` says the account's mail server confirmed `sender`; only then does "always show images" apply. */
 export function HtmlBody({ html, note, sender, confirmed }: { html: string; note?: string; sender: string; confirmed: boolean }) {
+  const t = useT();
   const frame = useRef<HTMLIFrameElement>(null);
   // Select the stored text and parse it here: a selector must not build a new list on every call.
   const font = useStore((s) => fontChoice(s.settings.font));
@@ -127,22 +129,22 @@ export function HtmlBody({ html, note, sender, confirmed }: { html: string; note
     <div>
       {hasRemoteImages && !images && (
         <div className="mb-2 flex items-center gap-3 rounded-[10px] bg-canvas px-3 py-1.5 text-[13px] text-ink2">
-          Images from the internet are hidden to protect your privacy.
+          {t("htmlBody.hidden")}
           <Button className="ml-auto h-7 flex-none" onClick={() => setOnce(true)}>
-            Show images
+            {t("htmlBody.show")}
           </Button>
           {address && confirmed && (
             <Button className="h-7 flex-none" onClick={() => setAlways(true)}>
-              Always from this sender
+              {t("htmlBody.always")}
             </Button>
           )}
         </div>
       )}
       {hasRemoteImages && always && (
         <p className="mb-2 px-1 text-xs text-ink3">
-          Images from {address} are always shown.{" "}
+          {t("htmlBody.alwaysShown", { address })}{" "}
           <button type="button" className="text-brand underline" onClick={() => setAlways(false)}>
-            Stop
+            {t("htmlBody.stop")}
           </button>
         </p>
       )}
@@ -150,7 +152,7 @@ export function HtmlBody({ html, note, sender, confirmed }: { html: string; note
       <iframe
         key={shown}
         ref={frame}
-        title="Message"
+        title={t("htmlBody.frameTitle")}
         sandbox="allow-same-origin"
         srcDoc={doc}
         onLoad={onLoad}

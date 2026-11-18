@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { backend, errorText } from "./backend";
 import type { UpdateAvailable } from "./backend";
 import { longTime, useTwelveHourClock } from "./lib/dates";
+import { getLanguage, langOf, setCurrentLanguage, t } from "./lib/i18n";
 import { parseMailto } from "./lib/mailto";
 import { cleanMail } from "./lib/privacy";
 import { SIGNATURE_CID, hasPicture, signatureHtml } from "./lib/signature";
@@ -41,7 +42,7 @@ export const ALL_INBOXES = -1;
 
 export function allInboxes(folders: Folder[]): Folder {
   const unread = folders.filter((f) => f.role === "inbox").reduce((n, f) => n + f.unread, 0);
-  return { id: ALL_INBOXES, accountId: 0, name: "All inboxes", role: "inbox", favorite: true, unread };
+  return { id: ALL_INBOXES, accountId: 0, name: t("folders.allInboxes"), role: "inbox", favorite: true, unread };
 }
 
 /** The folder being shown, which may be "All inboxes". */
@@ -209,16 +210,14 @@ function prefetch(ids: number[]) {
 
 const escapeHtml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const nowSeconds = () => Math.floor(Date.now() / 1000);
-const plural = (n: number, one: string) => (n === 1 ? `1 ${one}` : `${n} ${one}s`);
 
 /** The original message as it is quoted under a reply or forward. */
 function quoteOf(m: MessageDetail, forward: boolean): string {
   const when = longTime(new Date(m.date * 1000), new Date());
   // Quoted mail is sent on to others: leave the trackers out of it.
   const body = m.html ? cleanMail(m.html).html : `<p>${escapeHtml(m.plain).replace(/\n/g, "<br>")}</p>`;
-  const intro = forward
-    ? `<p>---------- Forwarded message ----------<br>From: ${escapeHtml(m.fromName)} &lt;${escapeHtml(m.fromAddress)}&gt;<br>Date: ${when}<br>Subject: ${escapeHtml(m.subject)}<br>To: ${escapeHtml(m.to)}</p>`
-    : `<p>On ${when}, ${escapeHtml(m.fromName)} wrote:</p>`;
+  const header = `${t("quote.forwardedMessage")}<br>${t("quote.from")}: ${escapeHtml(m.fromName)} &lt;${escapeHtml(m.fromAddress)}&gt;<br>${t("quote.date")}: ${when}<br>${t("quote.subject")}: ${escapeHtml(m.subject)}<br>${t("quote.to")}: ${escapeHtml(m.to)}`;
+  const intro = forward ? `<p>${header}</p>` : `<p>${t("quote.wrote", { when, name: escapeHtml(m.fromName) })}</p>`;
   return `${intro}<blockquote style="margin:0 0 0 8px;padding-left:10px;border-left:3px solid #e3e6ea">${body}</blockquote>`;
 }
 
@@ -229,7 +228,7 @@ function quoteOf(m: MessageDetail, forward: boolean): string {
  */
 function forwardedText(m: MessageDetail): string {
   // The full date: "Today" would be wrong by the time the forward is read.
-  const when = new Date(m.date * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const when = new Date(m.date * 1000).toLocaleString(getLanguage() === "vi" ? "vi-VN" : "en-US", { dateStyle: "medium", timeStyle: "short" });
   // A message with only an HTML part still has its text: the engine derives it.
   const text = m.plain.trim() || new DOMParser().parseFromString(m.html ?? "", "text/html").body.textContent?.trim() || "";
   const paragraphs = text
@@ -237,7 +236,7 @@ function forwardedText(m: MessageDetail): string {
     .map((p) => `<p>${escapeHtml(p.trim()).replace(/\n/g, "<br>")}</p>`)
     .join("");
   const from = m.fromName && m.fromName !== m.fromAddress ? `${escapeHtml(m.fromName)} &lt;${escapeHtml(m.fromAddress)}&gt;` : escapeHtml(m.fromAddress);
-  return `<p>---------- Forwarded message ----------<br>From: ${from}<br>Date: ${when}<br>Subject: ${escapeHtml(m.subject)}<br>To: ${escapeHtml(m.to)}</p>${paragraphs}`;
+  return `<p>${t("quote.forwardedMessage")}<br>${t("quote.from")}: ${from}<br>${t("quote.date")}: ${when}<br>${t("quote.subject")}: ${escapeHtml(m.subject)}<br>${t("quote.to")}: ${escapeHtml(m.to)}</p>${paragraphs}`;
 }
 
 const prefixed = (prefix: string, subject: string) => (new RegExp(`^${prefix}:`, "i").test(subject) ? subject : `${prefix}: ${subject}`);
@@ -296,22 +295,22 @@ export const useStore = create<State>((set, get) => {
   }
 
   /** Run a move-like action, then offer Undo. */
-  async function moved(ids: number[], what: string, run: () => Promise<number[]>) {
+  async function moved(ids: number[], what: "archived" | "moved" | "deleted", run: () => Promise<number[]>) {
     if (ids.length === 0) return;
     leave(ids);
     try {
       const ops = await run();
       const undo = ops.length
         ? {
-            label: "Undo",
+            label: t("toast.undo"),
             run: () =>
               void backend.undoMoves(ops).then((n) => {
-                get().showToast(n === ops.length ? "Undone" : "Too late to undo: the change has already reached the mail server.");
+                get().showToast(n === ops.length ? t("toast.undone") : t("toast.tooLateUndo"));
                 void get().refresh();
               }),
           }
         : undefined;
-      get().showToast(`${plural(ids.length, "message")} ${what}`, undo);
+      get().showToast(t(`toast.${what}`, { count: ids.length }), undo);
     } catch (e) {
       get().showToast(errorText(e));
       await get().refresh();
@@ -361,8 +360,8 @@ export const useStore = create<State>((set, get) => {
       backend.onProgress((p) => set((s) => ({ progress: { ...s.progress, [p.accountId]: p } })));
       backend.onUpdate((update) => set({ update }));
       void backend.updateStatus().then((update) => set({ update })).catch(() => {});
-      backend.onSendFailed((f) => get().showToast(`"${f.subject || "(no subject)"}" could not be sent and will be retried. ${f.error}`));
-      backend.onSentCopyFailed((f) => get().showToast(`"${f.subject || "(no subject)"}" was sent, but no copy could be saved in Sent. ${f.error}`));
+      backend.onSendFailed((f) => get().showToast(t("toast.sendFailed", { subject: f.subject || t("message.noSubject"), error: f.error })));
+      backend.onSentCopyFailed((f) => get().showToast(t("toast.sentCopyFailed", { subject: f.subject || t("message.noSubject"), error: f.error })));
       const info = backend.appInfo().catch((e) => (console.error("app_info failed", e), null));
       void info.then((i) => i && set({ systemFont: { family: i.systemFont, light: i.systemFontLight } }));
       await Promise.all([get().refresh(), get().loadPreferences()]);
@@ -401,7 +400,7 @@ export const useStore = create<State>((set, get) => {
     },
 
     loadPreferences: async () => {
-      const keys = ["theme", "density", "body_days", "notifications", "undo_seconds", "google_client_id", "google_client_secret", "block_trackers", "phishing_warnings", "brand_logos", "close_to_tray", "start_at_login", "focused_inbox", "image_senders", "blocked_senders", "font", "text_size", "time_format", "onboarded", "usage_stats", "update_check", "thread_collapsed", "seen_version"];
+      const keys = ["theme", "density", "body_days", "notifications", "undo_seconds", "google_client_id", "google_client_secret", "block_trackers", "phishing_warnings", "brand_logos", "close_to_tray", "start_at_login", "focused_inbox", "image_senders", "blocked_senders", "font", "text_size", "time_format", "language", "onboarded", "usage_stats", "update_check", "thread_collapsed", "seen_version"];
       const [signatures, signatureDefaults, values] = await Promise.all([
         backend.listSignatures(),
         backend.signatureDefaults(),
@@ -413,6 +412,7 @@ export const useStore = create<State>((set, get) => {
       });
       const split = get().settings.focused_inbox !== settings.focused_inbox;
       useTwelveHourClock(settings.time_format === "12");
+      setCurrentLanguage(langOf(settings));
       set({ signatures, signatureDefaults, settings });
       if (split) await loadList(false); // the first list was loaded before the preference was known
     },
@@ -421,6 +421,7 @@ export const useStore = create<State>((set, get) => {
       set((s) => ({ settings: { ...s.settings, [key]: value } }));
       await backend.setSetting(key, value);
       if (key === "time_format") useTwelveHourClock(value === "12");
+      if (key === "language") setCurrentLanguage(value === "vi" ? "vi" : "en");
       // These change what the list shows: read it again so every row is redrawn.
       if (key === "focused_inbox" || key === "time_format") await loadList(true);
     },
@@ -520,10 +521,10 @@ export const useStore = create<State>((set, get) => {
 
     searchServer: async () => {
       const { query, filters } = get();
-      get().showToast("Searching the mail server…");
+      get().showToast(t("toast.searchingServer"));
       try {
         const fetched = await backend.searchServer(query, filters.accountId);
-        get().showToast(fetched === 0 ? "The server found nothing more." : `${plural(fetched, "more message")} downloaded from the server.`);
+        get().showToast(fetched === 0 ? t("toast.serverFoundNothing") : t("toast.serverDownloaded", { count: fetched }));
         await loadList(false);
       } catch (e) {
         get().showToast(errorText(e));
@@ -563,7 +564,7 @@ export const useStore = create<State>((set, get) => {
       await backend.snooze(id, until);
       if (until !== null) {
         leave([id]);
-        get().showToast("Snoozed. It returns to the top of the folder, unread.", { label: "Undo", run: () => void backend.snooze(id, null).then(() => get().refresh()) });
+        get().showToast(t("toast.snoozed"), { label: t("toast.undo"), run: () => void backend.snooze(id, null).then(() => get().refresh()) });
       }
     },
 
@@ -571,7 +572,7 @@ export const useStore = create<State>((set, get) => {
       const m = get().items.find((x) => x.id === id) ?? get().detail;
       if (!m) return;
       const domain = m.fromAddress.split("@").pop() ?? "";
-      const who = wholeDomain ? `everyone at ${domain}` : m.fromAddress;
+      const who = wholeDomain ? t("block.everyoneAt", { domain }) : m.fromAddress;
       // Their mail in the list on screen leaves at once; the engine moves the rest.
       const hostOf = (x: MessageSummary) => (x.fromAddress.split("@").pop() ?? "").toLowerCase();
       const covered = (x: MessageSummary) =>
@@ -582,8 +583,8 @@ export const useStore = create<State>((set, get) => {
         const ops = await backend.blockSender(id, wholeDomain);
         await get().loadPreferences();
         await get().refresh();
-        const undo = ops.length ? { label: "Undo move", run: () => void backend.undoMoves(ops).then(() => get().refresh()) } : undefined;
-        get().showToast(`Blocked ${who}. Their mail now goes to Junk. Unblock in Settings, Privacy.`, undo);
+        const undo = ops.length ? { label: t("toast.undoMove"), run: () => void backend.undoMoves(ops).then(() => get().refresh()) } : undefined;
+        get().showToast(t("toast.blocked", { who }), undo);
       } catch (e) {
         get().showToast(errorText(e));
         await get().refresh();
@@ -592,7 +593,7 @@ export const useStore = create<State>((set, get) => {
 
     setSenderFocus: async (id, focused) => {
       await backend.setSenderFocus(id, focused);
-      get().showToast(`Mail from this sender now goes to ${focused ? "Focused" : "Other"}.`);
+      get().showToast(t("toast.senderFocus", { tab: t(focused ? "tabs.focused" : "tabs.other") }));
       await get().refresh();
     },
 
@@ -707,7 +708,7 @@ export const useStore = create<State>((set, get) => {
     markFolderRead: async (folder) => {
       try {
         await backend.markFolderRead(folder.id);
-        get().showToast(`Everything in ${folder.name} is marked as read.`);
+        get().showToast(t("toast.folderRead", { folder: folder.name }));
         await get().refresh();
       } catch (e) {
         get().showToast(errorText(e));
@@ -740,10 +741,10 @@ export const useStore = create<State>((set, get) => {
         const done = await backend.unsubscribe(m.id);
         get().showToast(
           done === "posted"
-            ? `Unsubscribe request sent to ${m.fromName}.`
+            ? t("toast.unsubPosted", { name: m.fromName })
             : done === "mailed"
-              ? `An unsubscribe message is on its way to ${m.fromName}.`
-              : "The sender's unsubscribe page is open in your browser.",
+              ? t("toast.unsubMailed", { name: m.fromName })
+              : t("toast.unsubPage"),
         );
       } catch (e) {
         get().showToast(errorText(e));
@@ -774,10 +775,10 @@ export const useStore = create<State>((set, get) => {
       set({ draft: null });
       if (draft.id !== undefined) await get().deleteDraft(draft.id);
       const undo = {
-        label: sendAt ? "Cancel" : "Undo",
+        label: sendAt ? t("common.cancel") : t("toast.undo"),
         run: () =>
           void backend.cancelSend(id).then((ok) => {
-            if (!ok) return get().showToast("Too late: the message has already been sent.");
+            if (!ok) return get().showToast(t("toast.tooLateSent"));
             // Back to a draft: save it again so it is not lost if the composer is closed.
             const again: Draft = { ...draft, id: undefined };
             void get()
@@ -785,7 +786,7 @@ export const useStore = create<State>((set, get) => {
               .then((id) => set({ draft: { ...again, id } }));
           }),
       };
-      get().showToast(sendAt ? `Scheduled for ${longTime(new Date(sendAt * 1000), new Date())}. VN Mail must be running then.` : delay > 0 ? `Sending in ${delay} seconds` : "Sending…", undo, sendAt || delay <= 0 ? undefined : at * 1000);
+      get().showToast(sendAt ? t("toast.scheduled", { when: longTime(new Date(sendAt * 1000), new Date()) }) : delay > 0 ? t("toast.sendingIn", { count: delay }) : t("toast.sending"), undo, sendAt || delay <= 0 ? undefined : at * 1000);
     },
 
     showSource: (sourceOf) => set({ sourceOf }),
