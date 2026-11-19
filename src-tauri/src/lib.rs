@@ -1274,7 +1274,7 @@ fn refresh_badge(app: &AppHandle) {
 /// The previous icon handle is destroyed after the new one is set, so repeated calls do not
 /// leak icon handles; the handle itself must stay alive while the window uses it.
 #[cfg(target_os = "windows")]
-fn set_taskbar_icon(window: &tauri::Window, state: &AppState, unread: i64) {
+fn set_taskbar_icon(window: &tauri::WebviewWindow, state: &AppState, unread: i64) {
     use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         CreateIconFromResourceEx, DestroyIcon, SendMessageW, LR_DEFAULTCOLOR, WM_SETICON,
