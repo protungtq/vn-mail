@@ -419,6 +419,22 @@ function Sync() {
   return (
     <>
       <Options
+        label={t("sync.intervalText")}
+        value={settings.sync_interval_minutes ?? "2"}
+        onChange={(v) => void setSetting("sync_interval_minutes", v)}
+        options={[
+          ["1", t("sync.intervalMinute")],
+          ["2", t("sync.intervalMinutes", { minutes: "2" })],
+          ["5", t("sync.intervalMinutes", { minutes: "5" })],
+          ["10", t("sync.intervalMinutes", { minutes: "10" })],
+          ["15", t("sync.intervalMinutes", { minutes: "15" })],
+          ["30", t("sync.intervalMinutes", { minutes: "30" })],
+        ]}
+      />
+      <p className="mb-4 text-[13px] text-ink2">
+        {t("sync.intervalNote")}
+      </p>
+      <Options
         label={t("sync.keepText")}
         value={settings.body_days ?? "0"}
         onChange={(v) => void setSetting("body_days", v)}
@@ -854,12 +870,35 @@ function Updates({ version }: { version: string }) {
 function About() {
   const t = useT();
   const [info, setInfo] = useState<AppInfo | null>(null);
+  const [moveFolder, setMoveFolder] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
+  const [moveError, setMoveError] = useState("");
   useEffect(() => {
     backend
       .appInfo()
       .then(setInfo)
       .catch((e) => console.error("app_info failed", e));
   }, []);
+  async function pickFolder() {
+    setMoveError("");
+    try {
+      const picked = await backend.pickDataDir();
+      if (picked) setMoveFolder(picked);
+    } catch (e) {
+      setMoveError(errorText(e));
+    }
+  }
+  async function doMove() {
+    if (!moveFolder || moving) return;
+    setMoving(true);
+    try {
+      await backend.moveDataDir(moveFolder);
+      // Success restarts the app before this returns.
+    } catch (e) {
+      setMoveError(errorText(e));
+      setMoving(false);
+    }
+  }
   const row = "flex gap-3 border-b border-edge py-2";
   const name = "w-36 flex-none text-ink2";
   return (
@@ -891,7 +930,26 @@ function About() {
           <>
             <div className={row}>
               <span className={name}>{t("about.dataDir")}</span>
-              <span className="selectable break-all">{info.dataDir}/vnmail.db</span>
+              <span className="min-w-0">
+                <span className="selectable break-all">{info.dataDir}/vnmail.db</span>
+                {moveFolder ? (
+                  <span className="mt-2 block text-[13px] text-ink2">
+                    {t("about.dataDirMoveConfirm", { folder: moveFolder })}
+                    <span className="mt-2 flex flex-wrap gap-2">
+                      <Button className="h-8" onClick={() => void doMove()}>
+                        {moving ? t("about.dataDirMoving") : t("about.dataDirMove")}
+                      </Button>
+                      <Button className="h-8" onClick={() => setMoveFolder(null)}>
+                        {t("common.cancel")}
+                      </Button>
+                    </span>
+                  </span>
+                ) : (
+                  <Button className="mt-2 h-8" onClick={() => void pickFolder()}>
+                    {t("about.dataDirChange")}
+                  </Button>
+                )}
+              </span>
             </div>
             <div className={row}>
               <span className={name}>{t("about.encryption")}</span>
@@ -903,6 +961,7 @@ function About() {
             </div>
           </>
         )}
+        <Problem text={moveError} />
         <div className={row}>
           <span className={name}>{t("about.builtWith")}</span>
           <span>

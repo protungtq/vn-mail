@@ -285,6 +285,12 @@ export const sampleBackend: Backend = {
     throw desktopOnly("Removing accounts");
   },
   syncNow: async () => {},
+  pickDataDir: async () => {
+    throw desktopOnly("Moving the mail database");
+  },
+  moveDataDir: async () => {
+    throw desktopOnly("Moving the mail database");
+  },
 
   listFolders: async () => folders.map((f) => ({ ...f, unread: messages.filter((m) => m.folderId === f.id && m.unread).length })),
   listMessages: async (id, focused, limit, offset, only) =>

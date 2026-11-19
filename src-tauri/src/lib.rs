@@ -92,16 +92,48 @@ fn adopt_old_secret(user: &str) {
         }
     }
 }
+
+/// The file, in the usual data folder, naming the folder the mail database moved to.
+const DATA_LOCATION: &str = "data-location.txt";
+
+/// The folder holding the mail database: the usual app data folder, or the one
+/// named by the pointer file when the user moved the database elsewhere.
+/// Returns the folder and whether the pointer sent us elsewhere.
+fn resolve_data_dir(usual: &std::path::Path) -> (std::path::PathBuf, bool) {
+    let pointer = usual.join(DATA_LOCATION);
+    if let Ok(target) = std::fs::read_to_string(&pointer) {
+        let target = std::path::PathBuf::from(target.trim());
+        if target.is_absolute() && target.join(DATABASE).exists() {
+            return (target, true);
+        }
+        // The folder the pointer names is gone: fall back to the usual folder
+        // and drop the stale pointer, so the next start does not retry it.
+        let _ = std::fs::remove_file(&pointer);
+    }
+    (usual.to_path_buf(), false)
+}
+
+fn same_path(a: &std::path::Path, b: &std::path::Path) -> bool {
+    if a == b {
+        return true;
+    }
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(x), Ok(y)) => x == y,
+        _ => false,
+    }
+}
 /// Bodies downloaded between two header syncs, so new mail is never far behind.
 const BODIES_PER_ROUND: u32 = 400;
 /// Sender checks re-read between two header syncs.
 const HEADER_INFO_PER_ROUND: u32 = 4000;
 const RETRY_AFTER: Duration = Duration::from_secs(30);
 const IDLE_FOR: Duration = Duration::from_secs(20 * 60);
-const POLL_EVERY: Duration = Duration::from_secs(120);
 
 pub struct AppState {
     db: Db,
+    /// Folder holding the mail database: the usual app data folder, or the one
+    /// the user moved it to (see `DATA_LOCATION`).
+    data_dir: std::path::PathBuf,
     /// One spare connection per account for things the user is waiting on
     /// (opening a message, changing a flag). Background sync has its own.
     interactive: tokio::sync::Mutex<HashMap<i64, Session>>,
@@ -228,17 +260,28 @@ impl sync::Notifier for UiNotifier {
     }
 }
 
+/// How often to ask the server for new mail. The Settings default is 2 minutes;
+/// servers that support push still announce new mail right away.
+fn poll_every(db: &Db) -> Duration {
+    let minutes: u64 = db::get_setting(&db::lock(db), "sync_interval_minutes")
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(2);
+    Duration::from_secs(minutes.clamp(1, 30) * 60)
+}
+
 /// Wait for the server to announce a change in the inbox, a wake-up, or a timeout.
-async fn wait_for_news(mut session: Session, wake: &Notify) -> Result<Session> {
+async fn wait_for_news(mut session: Session, wake: &Notify, poll: Duration) -> Result<Session> {
     if !session.capabilities().await?.has_str("IDLE") {
-        tokio::select! { _ = tokio::time::sleep(POLL_EVERY) => {}, _ = wake.notified() => {} }
+        tokio::select! { _ = tokio::time::sleep(poll) => {}, _ = wake.notified() => {} }
         return Ok(session);
     }
     session.select("INBOX").await?;
     let mut handle = session.idle();
     handle.init().await?;
     {
-        let (wait, stop) = handle.wait_with_timeout(IDLE_FOR);
+        let (wait, stop) = handle.wait_with_timeout(poll.min(IDLE_FOR));
         tokio::select! { result = wait => { result?; }, _ = wake.notified() => {} }
         drop(stop);
     }
@@ -268,7 +311,7 @@ async fn sync_loop(app: &AppHandle, account_id: i64, wake: &Notify) -> Result<()
             continue;
         }
         sync::Notifier::progress(&notifier, Progress { account_id, phase: "idle".into(), done: 0, total: 0, message: String::new() });
-        session = wait_for_news(session, wake).await?;
+        session = wait_for_news(session, wake, poll_every(&state.db)).await?;
     }
 }
 
@@ -343,11 +386,67 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> Result<AppInfo> {
     Ok(AppInfo {
         version: app.package_info().version.to_string(),
         schema_version: store::schema_version(&conn)?,
-        data_dir: app.path().app_data_dir().map(|d| d.display().to_string()).unwrap_or_default(),
+        data_dir: state.data_dir.display().to_string(),
         cipher: conn.query_row("PRAGMA cipher_version", [], |r| r.get(0)).unwrap_or_default(),
         system_font,
         system_font_light,
     })
+}
+
+/// Let the user pick the folder the mail database moves to. Null when cancelled.
+#[tauri::command]
+async fn pick_data_dir(app: AppHandle) -> Result<Option<String>> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = tokio::task::spawn_blocking(move || app.dialog().file().blocking_pick_folder()).await?;
+    Ok(picked.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned()))
+}
+
+/// Move the mail database to another folder and restart there.
+/// Copies the database (after flushing its write-ahead log), checks the copy
+/// opens with the same key, then records the new folder and restarts. The old
+/// files are removed on the next start, once the new folder has opened.
+#[tauri::command]
+fn move_data_dir(app: AppHandle, state: State<'_, AppState>, dir: String) -> Result<()> {
+    let target = std::path::PathBuf::from(dir.trim());
+    if !target.is_absolute() {
+        return Err(Error("Choose a folder by its full path.".into()));
+    }
+    let usual = app.path().app_data_dir().map_err(|e| Error(e.to_string()))?;
+    std::fs::create_dir_all(&target).map_err(|e| Error(format!("Could not use that folder: {e}")))?;
+    let current = state.data_dir.clone();
+    if same_path(&target, &current) {
+        return Err(Error("The mail database is already in that folder.".into()));
+    }
+    if target.starts_with(&current) || current.starts_with(&target) {
+        return Err(Error("Choose a folder that neither contains the current one nor sits inside it.".into()));
+    }
+    // Flush the write-ahead log into the database, so the file copy is complete on its own.
+    let conn = db::lock(&state.db);
+    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
+    for name in [DATABASE, "vnmail.db-wal", "vnmail.db-shm"] {
+        let from = current.join(name);
+        if !from.exists() {
+            continue;
+        }
+        std::fs::copy(&from, target.join(name)).map_err(|e| Error(format!("Could not copy {name}: {e}")))?;
+        if std::fs::metadata(&from).map(|m| m.len()).ok() != std::fs::metadata(target.join(name)).map(|m| m.len()).ok() {
+            return Err(Error(format!("The copy of {name} came out the wrong size.")));
+        }
+    }
+    drop(conn);
+    // The copy must open with the same key before the pointer is written.
+    let moved_db = target.join(DATABASE);
+    let key = database_key(&moved_db)?;
+    let check = store::open(&moved_db, &key)?;
+    let sound: String = check.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
+    if sound != "ok" {
+        return Err(Error("The copied database did not pass its check.".into()));
+    }
+    drop(check);
+    let tmp = usual.join("data-location.txt.tmp");
+    std::fs::write(&tmp, target.display().to_string()).map_err(|e| Error(format!("Could not record the new folder: {e}")))?;
+    std::fs::rename(&tmp, usual.join(DATA_LOCATION)).map_err(|e| Error(format!("Could not record the new folder: {e}")))?;
+    app.restart()
 }
 
 #[tauri::command]
@@ -1594,8 +1693,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
-            let dir = app.path().app_data_dir()?;
-            adopt_old_data(&dir);
+            let usual = app.path().app_data_dir()?;
+            adopt_old_data(&usual);
+            let (dir, moved) = resolve_data_dir(&usual);
             std::fs::create_dir_all(&dir)?;
             let _ = std::fs::remove_dir(dir.join("raw")); // left empty by the removed POP3 support
             // Attachments opened last time were written out unencrypted: remove them.
@@ -1605,6 +1705,13 @@ pub fn run() {
             let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
             let database = dir.join(DATABASE);
             let conn = store::open(&database, &database_key(&database)?)?;
+            // The database moved: once the new folder opens, the old files are
+            // dead weight on the old drive.
+            if moved {
+                for name in [DATABASE, "vnmail.db-wal", "vnmail.db-shm"] {
+                    let _ = std::fs::remove_file(usual.join(name));
+                }
+            }
             // Before any usage request: installations from before the count became a choice keep their setting.
             stats::keep_earlier_default(&conn).map_err(|e| e.0)?;
             // Paths of files once chosen for attaching are a history of the user's files: keep them only while needed.
@@ -1617,6 +1724,7 @@ pub fn run() {
             }
             app.manage(AppState {
                 db: Arc::new(Mutex::new(conn)),
+                data_dir: dir,
                 interactive: Default::default(),
                 wakers: Default::default(),
                 outbox_wake: Notify::new(),
@@ -1707,6 +1815,8 @@ pub fn run() {
             check_update,
             install_update,
             mark_ready,
+            pick_data_dir,
+            move_data_dir,
             pick_attachments,
             open_picked_file,
             open_attachment,

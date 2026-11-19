@@ -60,6 +60,10 @@ export interface Backend {
   /** Put the accounts in this order, given as their ids. */
   reorderAccounts(ids: number[]): Promise<void>;
   syncNow(): Promise<void>;
+  /** Lets the user pick the folder the mail database moves to. Null when cancelled. */
+  pickDataDir(): Promise<string | null>;
+  /** Copies the mail database to the chosen folder, checks it, and restarts VN Mail there. */
+  moveDataDir(dir: string): Promise<void>;
 
   listFolders(): Promise<Folder[]>;
   setFavorite(folderId: number, favorite: boolean): Promise<void>;
@@ -167,6 +171,8 @@ const tauriBackend: Backend = {
   removeAccount: (id) => invoke("remove_account", { id }),
   reorderAccounts: (ids) => invoke("reorder_accounts", { ids }),
   syncNow: () => invoke("sync_now"),
+  pickDataDir: () => invoke("pick_data_dir"),
+  moveDataDir: (dir) => invoke("move_data_dir", { dir }),
 
   listFolders: () => invoke("list_folders"),
   setFavorite: (folderId, favorite) => invoke("set_favorite", { folderId, favorite }),
