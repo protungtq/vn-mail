@@ -16,7 +16,7 @@ import logo from "../../src-tauri/icons/128x128@2x.png";
 import { backend } from "../backend";
 import { REPOSITORY } from "../lib/links";
 import { textSizeOptions } from "../lib/font";
-import { useT } from "../lib/useT";
+import { useLang, useT } from "../lib/useT";
 import { useStore } from "../store";
 import { preferAccountKind } from "./AddAccount";
 import { MOD } from "../lib/keys";
@@ -66,6 +66,45 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
   );
 }
 
+/** The two interface languages as flag buttons, for first-run users who cannot read the current language yet. */
+function FlagButton({ active, title, onClick, children }: { active: boolean; title: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      className={`overflow-hidden rounded-md border shadow-sm transition-opacity ${active ? "border-transparent opacity-100 ring-2 ring-brand" : "border-edge opacity-55 hover:opacity-100"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FlagVN() {
+  return (
+    <svg viewBox="0 0 30 20" className="block h-[18px] w-7" aria-hidden="true">
+      <rect width="30" height="20" fill="#DA251D" />
+      <polygon points="15,3.5 16.5,7.9 21.2,8 17.5,10.8 18.8,15.3 15,12.6 11.2,15.3 12.5,10.8 8.8,8 13.5,7.9" fill="#FFDE00" />
+    </svg>
+  );
+}
+
+function FlagGB() {
+  return (
+    <svg viewBox="0 0 60 30" className="block h-[18px] w-7" aria-hidden="true">
+      <rect width="60" height="30" fill="#012169" />
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#FFFFFF" strokeWidth="6" />
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" strokeWidth="2" />
+      <rect x="25" y="0" width="10" height="30" fill="#FFFFFF" />
+      <rect x="0" y="10" width="60" height="10" fill="#FFFFFF" />
+      <rect x="27" y="0" width="6" height="30" fill="#C8102E" />
+      <rect x="0" y="12" width="60" height="6" fill="#C8102E" />
+    </svg>
+  );
+}
+
 /** A small picture of the app for the right-hand side: three messages, one of them flagged as suspicious. */
 function Preview() {
   const t = useT();
@@ -111,6 +150,7 @@ function Preview() {
 /** First-run welcome: what VN Mail is, add an account, pick the look, start. */
 export function Onboarding() {
   const t = useT();
+  const lang = useLang();
   const accounts = useStore((s) => s.accounts);
   const settings = useStore((s) => s.settings);
   const { setSetting, setDialog, setWelcome } = useStore.getState();
@@ -138,7 +178,15 @@ export function Onboarding() {
         <div className="flex items-center gap-2.5">
           <img src={logo} alt="" className="size-8" />
           <span className="text-lg text-ink">VN Mail</span>
-          <button type="button" onClick={finish} className="ml-auto rounded-lg px-3 py-1.5 text-ink3 hover:bg-hover hover:text-ink">
+          <div className="ml-auto flex items-center gap-1.5" role="group" aria-label={t("settings.language")}>
+            <FlagButton active={lang === "vi"} title="Tiếng Việt" onClick={() => void setSetting("language", "vi")}>
+              <FlagVN />
+            </FlagButton>
+            <FlagButton active={lang === "en"} title="English" onClick={() => void setSetting("language", "en")}>
+              <FlagGB />
+            </FlagButton>
+          </div>
+          <button type="button" onClick={finish} className="rounded-lg px-3 py-1.5 text-ink3 hover:bg-hover hover:text-ink">
             {t("onboarding.skip")}
           </button>
         </div>
