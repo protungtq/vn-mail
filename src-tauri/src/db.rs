@@ -157,6 +157,17 @@ pub fn keep_only_folders(conn: &Connection, account_id: i64, keep: &[i64]) -> Re
     Ok(())
 }
 
+/// Unread messages in inbox folders of all accounts: the number behind the red dot on the tray and taskbar icons.
+pub fn unread_inbox_total(conn: &Connection) -> Result<i64> {
+    conn.query_row(
+        "SELECT count(DISTINCT m.id) FROM messages m WHERE m.unread = 1
+          AND EXISTS (SELECT 1 FROM message_folders mf JOIN folders f ON f.id = mf.folder_id
+                       WHERE mf.message_id = m.id AND f.role = 'inbox')",
+        [],
+        |r| r.get(0),
+    )
+}
+
 pub fn list_folders(conn: &Connection) -> Result<Vec<Folder>> {
     let mut stmt = conn.prepare(
         "SELECT f.id, f.account_id, f.name, f.role, f.favorite,

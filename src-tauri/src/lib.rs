@@ -143,6 +143,8 @@ pub struct AppState {
     outbox_wake: Notify,
     /// True once the tray icon exists, so the window may hide there instead of quitting.
     tray: std::sync::atomic::AtomicBool,
+    /// Unread inbox count currently shown on the tray and taskbar icons.
+    badge: std::sync::atomic::AtomicI64,
     /// A newer version, once the daily check has found one.
     update: Mutex<Option<updates::Available>>,
     /// Google access tokens per account, with their expiry (Unix seconds).
@@ -1219,6 +1221,37 @@ fn add_tray_icon(app: &tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
+/// A red dot on the tray and taskbar icons while any inbox has unread mail; the tray tooltip names the count.
+/// Skips repainting when the count has not changed since the last call.
+fn refresh_badge(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let unread = db::unread_inbox_total(&db::lock(&state.db)).unwrap_or(0);
+    if state.badge.swap(unread, std::sync::atomic::Ordering::Relaxed) == unread {
+        return; // same count as shown: the icons are already right
+    }
+    let has_unread = unread > 0;
+    if let Some(tray) = app.tray_by_id("main") {
+        let bytes: &[u8] = if has_unread { include_bytes!("../icons/tray-unread.png") } else { include_bytes!("../icons/tray.png") };
+        if let Ok(icon) = tauri::image::Image::from_bytes(bytes) {
+            let _ = tray.set_icon(Some(icon));
+        }
+        let tooltip = if has_unread { format!("VN Mail ({unread} unread)") } else { "VN Mail".to_string() };
+        let _ = tray.set_tooltip(&tooltip);
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let bytes: &[u8] = if has_unread { include_bytes!("../icons/icon-unread.png") } else { include_bytes!("../icons/icon.png") };
+        if let Ok(icon) = tauri::image::Image::from_bytes(bytes) {
+            let _ = window.set_icon(icon);
+        }
+    }
+}
+
+/// Re-read the unread inbox count and repaint the tray and taskbar icons. Called from the UI after folders reload.
+#[tauri::command]
+fn update_badge(app: AppHandle) {
+    refresh_badge(&app);
+}
+
 // ---------- Google sign-in ----------
 
 /// Sign in to Gmail in the system browser and add the account.
@@ -1751,6 +1784,7 @@ pub fn run() {
                 wakers: Default::default(),
                 outbox_wake: Notify::new(),
                 tray: Default::default(),
+                badge: Default::default(),
                 update: Default::default(),
                 tokens: Default::default(),
             });
@@ -1758,6 +1792,7 @@ pub fn run() {
                 Ok(()) => app.state::<AppState>().tray.store(true, std::sync::atomic::Ordering::Relaxed),
                 Err(e) => eprintln!("No tray icon: {e}"), // the app works without one; closing the window then quits
             }
+            refresh_badge(app.handle());
             // Started at login: stay in the tray. Without a tray there would be no way back, so show the window.
             let hidden = std::env::args().any(|arg| arg == autostart::HIDDEN) && app.state::<AppState>().tray.load(std::sync::atomic::Ordering::Relaxed);
             if !hidden {
@@ -1843,7 +1878,8 @@ pub fn run() {
             pick_attachments,
             open_picked_file,
             open_attachment,
-            save_message
+            save_message,
+            update_badge
         ])
         .build(tauri::generate_context!())
         .expect("error while starting VN Mail")

@@ -60,6 +60,8 @@ export interface Backend {
   /** Put the accounts in this order, given as their ids. */
   reorderAccounts(ids: number[]): Promise<void>;
   syncNow(): Promise<void>;
+  /** Repaints the tray and taskbar icons with a red dot while any inbox has unread mail. Desktop only; the preview ignores it. */
+  updateBadge(): Promise<void>;
   /** Lets the user pick the folder the mail database moves to. Null when cancelled. */
   pickDataDir(): Promise<string | null>;
   /** Copies the mail database to the chosen folder, checks it, and restarts VN Mail there. */
@@ -173,6 +175,7 @@ const tauriBackend: Backend = {
   removeAccount: (id) => invoke("remove_account", { id }),
   reorderAccounts: (ids) => invoke("reorder_accounts", { ids }),
   syncNow: () => invoke("sync_now"),
+  updateBadge: () => invoke("update_badge"),
   pickDataDir: () => invoke("pick_data_dir"),
   moveDataDir: (dir) => invoke("move_data_dir", { dir }),
 

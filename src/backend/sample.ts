@@ -471,6 +471,7 @@ export const sampleBackend: Backend = {
     return headers.join("\r\n") + "\r\n\r\n" + (m.html ?? m.plain);
   },
   markReady: async () => {},
+  updateBadge: async () => {}, // the browser preview has no tray or taskbar icon to paint
   openPickedFile: async () => {},
   openAttachment: async () => {
     throw desktopOnly("Opening attachments");
