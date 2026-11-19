@@ -1236,7 +1236,7 @@ fn refresh_badge(app: &AppHandle) {
             let _ = tray.set_icon(Some(icon));
         }
         let tooltip = if has_unread { format!("VN Mail ({unread} unread)") } else { "VN Mail".to_string() };
-        let _ = tray.set_tooltip(&tooltip);
+        let _ = tray.set_tooltip(Some(&tooltip));
     }
     if let Some(window) = app.get_webview_window("main") {
         // Pre-rendered numbered icons: the count is baked into the image, like Discord and Zalo.
