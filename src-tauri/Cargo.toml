@@ -46,10 +46,10 @@ tauri-plugin-updater = "2"
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 tauri-plugin-autostart = "2"
 
-# Windows-only: raw Win32 calls for the taskbar icon (WM_SETICON with the big icon),
+# Windows-only: raw Win32 calls for the taskbar overlay badge (ITaskbarList3),
 # which tauri's set_icon does not touch.
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Com", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [dev-dependencies]
 # For the test that checks published updates against the update key.

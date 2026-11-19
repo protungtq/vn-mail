@@ -145,9 +145,9 @@ pub struct AppState {
     tray: std::sync::atomic::AtomicBool,
     /// Unread inbox count currently shown on the tray and taskbar icons.
     badge: std::sync::atomic::AtomicI64,
-    /// Raw Windows icon handle currently set on the window (0 = none). Kept so the previous
-    /// icon can be destroyed after a new one is set; only used on Windows.
-    taskbar_icon: std::sync::atomic::AtomicIsize,
+    /// Raw Windows icon handle currently used as the taskbar overlay badge (0 = none).
+    /// Kept so the previous icon can be destroyed after a new one is set; Windows-only.
+    taskbar_overlay: std::sync::atomic::AtomicIsize,
     /// A newer version, once the daily check has found one.
     update: Mutex<Option<updates::Available>>,
     /// Google access tokens per account, with their expiry (Unix seconds).
@@ -1252,7 +1252,7 @@ fn refresh_badge(app: &AppHandle) {
             let _ = window.set_icon(icon);
         }
         #[cfg(target_os = "windows")]
-        set_taskbar_icon(&window, &state, unread);
+        set_taskbar_overlay(&window, &state, unread);
     }
     if state.badge.swap(unread, std::sync::atomic::Ordering::Relaxed) == unread {
         return; // same count as shown: the tray icon is already right
@@ -1268,58 +1268,198 @@ fn refresh_badge(app: &AppHandle) {
     }
 }
 
-/// Set the window's big icon — the one Windows shows on the taskbar — from a pre-rendered
-/// numbered .ico. Tauri's `set_icon` only sets the small title-bar icon, which is why the
-/// taskbar never changed. Windows-only; other platforms use `set_icon` alone.
-/// The previous icon handle is destroyed after the new one is set, so repeated calls do not
-/// leak icon handles; the handle itself must stay alive while the window uses it.
+/// Build an HICON from RGBA pixels (rows top to bottom) via a 32bpp top-down DIB
+/// section + CreateIconIndirect. The AND mask is all zero (opaque); transparency
+/// comes from the alpha channel of the 32bpp XOR mask.
 #[cfg(target_os = "windows")]
-fn set_taskbar_icon(window: &tauri::WebviewWindow, state: &AppState, unread: i64) {
-    use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
-    use windows_sys::Win32::UI::WindowsAndMessaging::{
-        CreateIconFromResourceEx, DestroyIcon, SendMessageW, LR_DEFAULTCOLOR, WM_SETICON,
+fn hicon_from_rgba(rgba: &[u8], width: u32, height: u32) -> windows_sys::Win32::UI::WindowsAndMessaging::HICON {
+    use windows_sys::Win32::Graphics::Gdi::{
+        CreateBitmap, CreateDIBSection, DeleteObject, BI_RGB, BITMAPINFO, BITMAPINFOHEADER,
+        DIB_RGB_COLORS, RGBQUAD,
     };
-    let ico: &[u8] = match unread {
-        0 => include_bytes!("../icons/icon.ico"),
-        1 => include_bytes!("../icons/icon-1.ico"),
-        2 => include_bytes!("../icons/icon-2.ico"),
-        3 => include_bytes!("../icons/icon-3.ico"),
-        4 => include_bytes!("../icons/icon-4.ico"),
-        5 => include_bytes!("../icons/icon-5.ico"),
-        6 => include_bytes!("../icons/icon-6.ico"),
-        7 => include_bytes!("../icons/icon-7.ico"),
-        8 => include_bytes!("../icons/icon-8.ico"),
-        9 => include_bytes!("../icons/icon-9.ico"),
-        _ => include_bytes!("../icons/icon-9plus.ico"),
+    use windows_sys::Win32::UI::WindowsAndMessaging::{CreateIconIndirect, ICONINFO};
+    if width == 0 || height == 0 || rgba.len() != (width * height * 4) as usize {
+        return 0;
+    }
+    let bmi = BITMAPINFO {
+        bmiHeader: BITMAPINFOHEADER {
+            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+            biWidth: width as i32,
+            biHeight: -(height as i32), // top-down: row 0 is the top row
+            biPlanes: 1,
+            biBitCount: 32,
+            biCompression: BI_RGB,
+            biSizeImage: 0,
+            biXPelsPerMeter: 0,
+            biYPelsPerMeter: 0,
+            biClrUsed: 0,
+            biClrImportant: 0,
+        },
+        bmiColors: [RGBQUAD { rgbBlue: 0, rgbGreen: 0, rgbRed: 0, rgbReserved: 0 }],
     };
+    let mut bits: *mut std::ffi::c_void = std::ptr::null_mut();
+    let hbm_color = unsafe { CreateDIBSection(0, &bmi, DIB_RGB_COLORS, &mut bits, 0, 0) };
+    if hbm_color == 0 || bits.is_null() {
+        return 0;
+    }
+    // DIB pixels are BGRA; the source is RGBA.
+    let dst = bits as *mut u8;
+    for i in 0..(width * height) as usize {
+        unsafe {
+            let s = rgba.as_ptr().add(i * 4);
+            let d = dst.add(i * 4);
+            *d = *s.add(2);
+            *d.add(1) = *s.add(1);
+            *d.add(2) = *s;
+            *d.add(3) = *s.add(3);
+        }
+    }
+    let mask_row_bytes = ((width + 31) / 32) * 4;
+    let mask = vec![0u8; (mask_row_bytes * height) as usize];
+    let hbm_mask = unsafe {
+        CreateBitmap(width as i32, height as i32, 1, 1, mask.as_ptr() as *const std::ffi::c_void)
+    };
+    if hbm_mask == 0 {
+        unsafe { DeleteObject(hbm_color) };
+        return 0;
+    }
+    let info = ICONINFO { fIcon: 1, xHotspot: 0, yHotspot: 0, hbmMask: hbm_mask, hbmColor: hbm_color };
+    let hicon = unsafe { CreateIconIndirect(&info) };
+    unsafe {
+        DeleteObject(hbm_color);
+        DeleteObject(hbm_mask);
+    }
+    hicon
+}
+
+/// Taskbar overlay badge (ITaskbarList3::SetOverlayIcon) — the standard unread-count
+/// badge, as used by Outlook and Teams. Replacing the window icon with WM_SETICON
+/// cannot work here: the app is pinned to the taskbar, and a pinned button keeps the
+/// pinned shortcut's icon, ignoring WM_SETICON entirely. That is why the title-bar
+/// icon and the tray icon showed the number while the taskbar never did (trials
+/// 10–13). An overlay is drawn on top of the taskbar icon, pinned or not.
+/// The overlay is a badge-only image (red disc + white number); its HICON is built
+/// from the PNG's RGBA pixels, so no .ico parsing is involved at all. With nothing
+/// unread the overlay is cleared. The previous overlay handle is destroyed after the
+/// new one is set, so repeated calls do not leak icon handles.
+#[cfg(target_os = "windows")]
+fn set_taskbar_overlay(window: &tauri::WebviewWindow, state: &AppState, unread: i64) {
+    use windows_sys::Win32::Foundation::{S_FALSE, S_OK};
+    use windows_sys::Win32::System::Com::{
+        CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_APARTMENTTHREADED,
+    };
+    use windows_sys::Win32::UI::Shell::TaskbarList;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, HICON};
+    use windows_sys::core::{GUID, PCWSTR};
+
+    // ITaskbarList3 vtable in COM order: IUnknown (QueryInterface, AddRef, Release),
+    // ITaskbarList (HrInit, AddTab, DeleteTab, ActivateTab, SetActiveAlt),
+    // ITaskbarList2 (MarkFullscreenWindow, SetProgressValue, SetProgressState),
+    // ITaskbarList3 (RegisterTab, UnregisterTab, SetTabOrder, SetTabActive,
+    // ThumbBarAddButtons, ThumbBarUpdateButtons, ThumbBarSetImageList, SetOverlayIcon,
+    // SetThumbnailTooltip, SetThumbnailClip). windows-sys exposes the interface only
+    // as a raw *mut c_void, so the calls below go through this vtable directly.
+    // IID_ITaskbarList3 = ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf, verified against the
+    // Windows SDK metadata (via the `windows` crate, pinvoke.net and Chromium).
+    // Only HrInit, SetOverlayIcon and Release are ever called; the rest exist so
+    // the layout matches the COM vtable exactly.
+    #[repr(C)]
+    #[allow(dead_code)]
+    struct TaskbarList3Vtbl {
+        query_interface: unsafe extern "system" fn(*mut std::ffi::c_void, *const GUID, *mut *mut std::ffi::c_void) -> i32,
+        add_ref: unsafe extern "system" fn(*mut std::ffi::c_void) -> u32,
+        release: unsafe extern "system" fn(*mut std::ffi::c_void) -> u32,
+        hr_init: unsafe extern "system" fn(*mut std::ffi::c_void) -> i32,
+        add_tab: unsafe extern "system" fn(*mut std::ffi::c_void, isize) -> i32,
+        delete_tab: unsafe extern "system" fn(*mut std::ffi::c_void, isize) -> i32,
+        activate_tab: unsafe extern "system" fn(*mut std::ffi::c_void, isize) -> i32,
+        set_active_alt: unsafe extern "system" fn(*mut std::ffi::c_void, isize) -> i32,
+        mark_fullscreen_window: unsafe extern "system" fn(*mut std::ffi::c_void, isize, i32) -> i32,
+        set_progress_value: unsafe extern "system" fn(*mut std::ffi::c_void, isize, u64, u64) -> i32,
+        set_progress_state: unsafe extern "system" fn(*mut std::ffi::c_void, isize, u32) -> i32,
+        register_tab: unsafe extern "system" fn(*mut std::ffi::c_void, isize, isize) -> i32,
+        unregister_tab: unsafe extern "system" fn(*mut std::ffi::c_void, isize) -> i32,
+        set_tab_order: unsafe extern "system" fn(*mut std::ffi::c_void, isize, isize) -> i32,
+        set_tab_active: unsafe extern "system" fn(*mut std::ffi::c_void, isize, isize, u32) -> i32,
+        thumb_bar_add_buttons: unsafe extern "system" fn(*mut std::ffi::c_void, isize, u32, *const std::ffi::c_void) -> i32,
+        thumb_bar_update_buttons: unsafe extern "system" fn(*mut std::ffi::c_void, isize, u32, *const std::ffi::c_void) -> i32,
+        thumb_bar_set_image_list: unsafe extern "system" fn(*mut std::ffi::c_void, isize, isize) -> i32,
+        set_overlay_icon: unsafe extern "system" fn(*mut std::ffi::c_void, isize, HICON, PCWSTR) -> i32,
+        set_thumbnail_tooltip: unsafe extern "system" fn(*mut std::ffi::c_void, isize, PCWSTR) -> i32,
+        set_thumbnail_clip: unsafe extern "system" fn(*mut std::ffi::c_void, isize, *const std::ffi::c_void) -> i32,
+    }
+
     let Ok(hwnd) = window.hwnd() else { return };
-    // A .ico FILE is ICONDIR (6 bytes) + one ICONDIRENTRY (16 bytes) per image + the image
-    // data; CreateIconFromResourceEx expects the image bits only. Passing the whole file
-    // made it read biSize = 0x00010000 from the ICONDIR header and fail (NULL) every time,
-    // so the taskbar icon was never set — while the tray and window icons worked, because
-    // Tauri's own image loader parses the file properly. Parse the first entry's offset
-    // (bytes 18..22) and length (bytes 14..18) and hand over just the image data.
-    let Some(image) = (|| -> Option<&[u8]> {
-        let len = u32::from_le_bytes(ico.get(14..18)?.try_into().ok()?) as usize;
-        let off = u32::from_le_bytes(ico.get(18..22)?.try_into().ok()?) as usize;
-        ico.get(off..off.checked_add(len)?)
-    })() else {
-        return;
+    let hwnd = hwnd.0;
+
+    // Overlay icon for the current count; 0 clears the overlay.
+    let hicon: HICON = if unread <= 0 {
+        0
+    } else {
+        let bytes: &[u8] = match unread {
+            1 => include_bytes!("../icons/badge-1.png"),
+            2 => include_bytes!("../icons/badge-2.png"),
+            3 => include_bytes!("../icons/badge-3.png"),
+            4 => include_bytes!("../icons/badge-4.png"),
+            5 => include_bytes!("../icons/badge-5.png"),
+            6 => include_bytes!("../icons/badge-6.png"),
+            7 => include_bytes!("../icons/badge-7.png"),
+            8 => include_bytes!("../icons/badge-8.png"),
+            9 => include_bytes!("../icons/badge-9.png"),
+            _ => include_bytes!("../icons/badge-9plus.png"),
+        };
+        let Ok(image) = tauri::image::Image::from_bytes(bytes) else { return };
+        let hicon = hicon_from_rgba(image.rgba(), image.width(), image.height());
+        if hicon == 0 {
+            return;
+        }
+        hicon
     };
-    let hicon = unsafe {
-        CreateIconFromResourceEx(image.as_ptr(), image.len() as u32, 1, 0x00030000, 0, 0, LR_DEFAULTCOLOR)
-    };
-    if hicon == 0 {
+
+    // COM must be initialized on this thread; Tauri commands run on worker threads
+    // where it may not be. S_OK = initialized here (uninitialize afterwards),
+    // S_FALSE = already initialized, RPC_E_CHANGED_MODE = initialized in another
+    // mode (calls still work, leave it alone).
+    const RPC_E_CHANGED_MODE: i32 = 0x80010106u32 as i32;
+    let com = unsafe { CoInitializeEx(std::ptr::null(), COINIT_APARTMENTTHREADED as u32) };
+    let com_owned = com == S_OK;
+    if !com_owned && com != S_FALSE && com != RPC_E_CHANGED_MODE {
+        if hicon != 0 {
+            unsafe { DestroyIcon(hicon) };
+        }
         return;
     }
-    unsafe {
-        // wParam 1 = ICON_BIG (taskbar), 0 = ICON_SMALL (title bar).
-        SendMessageW(hwnd.0 as isize, WM_SETICON, 1 as WPARAM, hicon as LPARAM);
-        SendMessageW(hwnd.0 as isize, WM_SETICON, 0 as WPARAM, hicon as LPARAM);
-        let old = state.taskbar_icon.swap(hicon, std::sync::atomic::Ordering::Relaxed);
-        if old != 0 {
-            DestroyIcon(old);
+    let iid = GUID::from_u128(0xea1afb91_9e28_4b86_90e9_9e9f8a5eefaf);
+    let mut raw: *mut std::ffi::c_void = std::ptr::null_mut();
+    let hr = unsafe { CoCreateInstance(&TaskbarList, std::ptr::null_mut(), CLSCTX_ALL, &iid, &mut raw) };
+    if hr != S_OK || raw.is_null() {
+        if com_owned {
+            unsafe { CoUninitialize() };
         }
+        if hicon != 0 {
+            unsafe { DestroyIcon(hicon) };
+        }
+        return;
+    }
+    let description: Vec<u16> = if unread > 0 {
+        format!("VN Mail ({unread} unread)").encode_utf16().chain(std::iter::once(0)).collect()
+    } else {
+        Vec::new()
+    };
+    let description_ptr: PCWSTR = if unread > 0 { description.as_ptr() } else { std::ptr::null() };
+    unsafe {
+        let vtbl = &**(raw as *const *const TaskbarList3Vtbl);
+        if (vtbl.hr_init)(raw) == S_OK {
+            let _ = (vtbl.set_overlay_icon)(raw, hwnd, hicon, description_ptr);
+        }
+        let _ = (vtbl.release)(raw);
+    }
+    if com_owned {
+        unsafe { CoUninitialize() };
+    }
+    let old = state.taskbar_overlay.swap(hicon, std::sync::atomic::Ordering::Relaxed);
+    if old != 0 {
+        unsafe { DestroyIcon(old) };
     }
 }
 
@@ -1862,7 +2002,7 @@ pub fn run() {
                 outbox_wake: Notify::new(),
                 tray: Default::default(),
                 badge: Default::default(),
-                taskbar_icon: Default::default(),
+                taskbar_overlay: Default::default(),
                 update: Default::default(),
                 tokens: Default::default(),
             });
