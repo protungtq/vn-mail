@@ -209,6 +209,18 @@ pub fn delete_folder_messages(conn: &Connection, folder_id: i64) -> Result<()> {
     Ok(())
 }
 
+/// The role of a folder ("inbox", "trash", …), if it still exists.
+pub fn folder_role(conn: &Connection, folder_id: i64) -> Result<Option<String>> {
+    Ok(conn.query_row("SELECT role FROM folders WHERE id = ?1", [folder_id], |r| r.get(0)).optional()?)
+}
+
+/// Every message in a folder, for actions that work on the whole folder at once.
+pub fn message_ids_in_folder(conn: &Connection, folder_id: i64) -> Result<Vec<i64>> {
+    let mut stmt = conn.prepare("SELECT message_id FROM message_folders WHERE folder_id = ?1")?;
+    let rows = stmt.query_map([folder_id], |r| r.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
 // ---------- messages: writing ----------
 
 pub fn local_uids(conn: &Connection, folder_id: i64) -> Result<HashSet<u32>> {

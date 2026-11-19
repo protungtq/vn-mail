@@ -822,6 +822,28 @@ fn delete_messages(app: AppHandle, state: State<'_, AppState>, ids: Vec<i64>) ->
     Ok(ops)
 }
 
+/// Permanently delete everything in the Trash folder: the folder menu's "empty" action.
+/// Messages already in Trash are deleted for good, on this computer and on the
+/// server; there is no undo window for them, so the interface confirms first.
+#[tauri::command]
+fn empty_trash(app: AppHandle, state: State<'_, AppState>, folder_id: i64) -> Result<u32> {
+    if db::folder_role(&db::lock(&state.db), folder_id)?.as_deref() != Some("trash") {
+        return Err(Error("Only the Trash folder can be emptied.".into()));
+    }
+    let ids = db::message_ids_in_folder(&db::lock(&state.db), folder_id)?;
+    let accounts = accounts_of(&state.db, &ids);
+    let mut count = 0;
+    for id in &ids {
+        actions::delete(&state.db, *id, now())?;
+        count += 1;
+    }
+    for account in &accounts {
+        let _ = app.emit("mail-changed", account);
+    }
+    wake_later(&app, accounts, Duration::from_secs(actions::UNDO_WINDOW as u64 + 1));
+    Ok(count)
+}
+
 /// Undo moves that have not been sent to the server yet. Returns how many were undone.
 #[tauri::command]
 fn undo_moves(app: AppHandle, state: State<'_, AppState>, ops: Vec<i64>) -> Result<u32> {
@@ -1795,6 +1817,7 @@ pub fn run() {
             suggest_contacts,
             move_messages,
             delete_messages,
+            empty_trash,
             undo_moves,
             thread_messages,
             set_categories,

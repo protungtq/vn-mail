@@ -363,6 +363,12 @@ export const sampleBackend: Backend = {
     changed(0);
     return ops;
   },
+  emptyTrash: async (folderId) => {
+    const doomed = messages.filter((m) => m.folderId === folderId);
+    doomed.forEach((m) => messages.splice(messages.indexOf(m), 1));
+    changed(0);
+    return doomed.length;
+  },
   undoMoves: async (ops) => {
     let undone = 0;
     for (const op of ops) {

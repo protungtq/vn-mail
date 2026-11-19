@@ -144,6 +144,7 @@ interface State {
   openDraft: (id: number) => void;
   toggleFavorite: (folder: Folder) => Promise<void>;
   markFolderRead: (folder: Folder) => Promise<void>;
+  emptyTrash: (folder: Folder) => Promise<void>;
   syncNow: () => void;
   /** Queue the draft. `sendAt` (Unix seconds) schedules it; otherwise it leaves after the undo delay. */
   send: (draft: Draft, signature: SavedSignature | undefined, sendAt?: number) => Promise<void>;
@@ -709,6 +710,16 @@ export const useStore = create<State>((set, get) => {
       try {
         await backend.markFolderRead(folder.id);
         get().showToast(t("toast.folderRead", { folder: folder.name }));
+        await get().refresh();
+      } catch (e) {
+        get().showToast(errorText(e));
+      }
+    },
+
+    emptyTrash: async (folder) => {
+      try {
+        const count = await backend.emptyTrash(folder.id);
+        get().showToast(t("toast.deleted", { count }));
         await get().refresh();
       } catch (e) {
         get().showToast(errorText(e));

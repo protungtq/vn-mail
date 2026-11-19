@@ -85,6 +85,8 @@ export interface Backend {
   moveMessages(ids: number[], target: MoveTarget): Promise<number[]>;
   /** To Deleted items, or permanently when already there. Returns undo ids. */
   deleteMessages(ids: number[]): Promise<number[]>;
+  /** Permanently deletes everything in the Trash folder. Returns how many were deleted. */
+  emptyTrash(folderId: number): Promise<number>;
   undoMoves(ops: number[]): Promise<number>;
   /** Deletes all mail from this message's sender in its folder. Returns undo ids. */
   sweep(id: number): Promise<number[]>;
@@ -188,6 +190,7 @@ const tauriBackend: Backend = {
   moveMessages: (ids, target) =>
     invoke("move_messages", { ids, folderId: "folderId" in target ? target.folderId : null, role: "role" in target ? target.role : null }),
   deleteMessages: (ids) => invoke("delete_messages", { ids }),
+  emptyTrash: (folderId) => invoke("empty_trash", { folderId }),
   undoMoves: (ops) => invoke("undo_moves", { ops }),
   sweep: (id) => invoke("sweep", { id }),
   setCategories: (id, categories) => invoke("set_categories", { id, categories }),

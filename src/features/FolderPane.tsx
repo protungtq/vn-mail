@@ -43,9 +43,11 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
   const moveMessages = useStore((s) => s.moveMessages);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
   const markFolderRead = useStore((s) => s.markFolderRead);
+  const emptyTrash = useStore((s) => s.emptyTrash);
   const showToast = useStore((s) => s.showToast);
   const [over, setOver] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
   // "All inboxes" is not a real folder: nothing can be moved into it or starred.
   const real = folder.id !== ALL_INBOXES;
   // A favourite shown at the top wears a star, so it is not mistaken for the folder in its account.
@@ -60,6 +62,7 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
         title={label ?? folder.name}
         onContextMenu={(e) => {
           e.preventDefault();
+          setConfirmEmpty(false);
           setMenu({ x: e.clientX, y: e.clientY });
         }}
         // Messages dragged from the list can be dropped here to move them.
@@ -86,10 +89,56 @@ function FolderRow({ folder, label, pinned }: { folder: Folder; label?: string; 
         <ContextMenu
           x={menu.x}
           y={menu.y}
-          items={[
-            { label: t("folders.markAllRead"), icon: <IconMailOpened size={16} />, onSelect: () => void markFolderRead(folder) },
-            ...(real ? [{ label: starLabel, icon: <IconStar size={16} />, onSelect: () => void toggleFavorite(folder) }] : []),
-          ]}
+          items={
+            confirmEmpty
+              ? [
+                  {
+                    custom: (close) => (
+                      <div className="w-64 px-3 py-2">
+                        <p className="text-[13px] text-ink">{t("folders.emptyTrashConfirm", { folder: folder.name })}</p>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            className="h-8 text-danger"
+                            onClick={() => {
+                              close();
+                              setConfirmEmpty(false);
+                              void emptyTrash(folder);
+                            }}
+                          >
+                            {t("folders.emptyTrash")}
+                          </Button>
+                          <Button
+                            className="h-8"
+                            onClick={() => {
+                              setConfirmEmpty(false);
+                              close();
+                            }}
+                          >
+                            {t("common.cancel")}
+                          </Button>
+                        </div>
+                      </div>
+                    ),
+                  },
+                ]
+              : [
+                  { label: t("folders.markAllRead"), icon: <IconMailOpened size={16} />, onSelect: () => void markFolderRead(folder) },
+                  ...(real ? [{ label: starLabel, icon: <IconStar size={16} />, onSelect: () => void toggleFavorite(folder) }] : []),
+                  ...(real && folder.role === "trash"
+                    ? [
+                        {
+                          label: t("folders.emptyTrash"),
+                          icon: <IconTrash size={16} />,
+                          danger: true,
+                          onSelect: () => {
+                            setConfirmEmpty(true);
+                            setMenu({ x: menu.x, y: menu.y });
+                          },
+                        },
+                      ]
+                    : []),
+                ]
+          }
           onClose={() => setMenu(null)}
         />
       )}
