@@ -1293,8 +1293,21 @@ fn set_taskbar_icon(window: &tauri::WebviewWindow, state: &AppState, unread: i64
         _ => include_bytes!("../icons/icon-9plus.ico"),
     };
     let Ok(hwnd) = window.hwnd() else { return };
+    // A .ico FILE is ICONDIR (6 bytes) + one ICONDIRENTRY (16 bytes) per image + the image
+    // data; CreateIconFromResourceEx expects the image bits only. Passing the whole file
+    // made it read biSize = 0x00010000 from the ICONDIR header and fail (NULL) every time,
+    // so the taskbar icon was never set — while the tray and window icons worked, because
+    // Tauri's own image loader parses the file properly. Parse the first entry's offset
+    // (bytes 18..22) and length (bytes 14..18) and hand over just the image data.
+    let Some(image) = (|| -> Option<&[u8]> {
+        let len = u32::from_le_bytes(ico.get(14..18)?.try_into().ok()?) as usize;
+        let off = u32::from_le_bytes(ico.get(18..22)?.try_into().ok()?) as usize;
+        ico.get(off..off.checked_add(len)?)
+    })() else {
+        return;
+    };
     let hicon = unsafe {
-        CreateIconFromResourceEx(ico.as_ptr(), ico.len() as u32, 1, 0x00030000, 0, 0, LR_DEFAULTCOLOR)
+        CreateIconFromResourceEx(image.as_ptr(), image.len() as u32, 1, 0x00030000, 0, 0, LR_DEFAULTCOLOR)
     };
     if hicon == 0 {
         return;
