@@ -42,6 +42,12 @@ export interface UpdateAvailable {
   how: "system" | "install" | "download";
   /** How this copy was installed: "deb", "rpm", "appimage", "dmg", "exe" or "other". */
   package: string;
+  /** The installer to download, or empty when the download page is the way. */
+  downloadUrl: string;
+  /** The file the installer is saved as. */
+  fileName: string;
+  /** The release's SHA-256 list, for checking the download. */
+  sumsUrl: string;
 }
 
 type Unsubscribe = () => void;
@@ -142,7 +148,7 @@ export interface Backend {
   updateStatus(): Promise<UpdateAvailable | null>;
   /** Checks now; null when this version is the newest. */
   checkUpdate(): Promise<UpdateAvailable | null>;
-  /** Downloads and installs the update, then restarts VN Mail. */
+  /** Downloads the installer, checks its SHA-256, opens it and quits VN Mail so it can be installed. */
   installUpdate(): Promise<void>;
   onUpdate(listener: (update: UpdateAvailable | null) => void): Unsubscribe;
   /** Tells the engine the first message list is on screen (used only for start-up timing). */
