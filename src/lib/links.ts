@@ -6,3 +6,6 @@ export const PRIVACY_PAGE = "https://github.com/protungtq/vn-mail/blob/main/PRIV
 
 /** The project's website. */
 export const WEBSITE = "https://so1.asia";
+
+/** Tip the author a coffee. The page itself is built separately. */
+export const DONATE = "https://donate.so1.asia";

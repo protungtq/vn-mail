@@ -1,4 +1,4 @@
-import { IconBell, IconCloudDownload, IconFilter, IconHeart, IconInfoCircle, IconPalette, IconShieldLock, IconSignature, IconTrash, IconUserCircle, IconX } from "@tabler/icons-react";
+import { IconBell, IconCloudDownload, IconCoffee, IconFilter, IconHeart, IconInfoCircle, IconPalette, IconShieldLock, IconSignature, IconTrash, IconUserCircle, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import logo from "../../src-tauri/icons/128x128.png";
 import { backend, errorText } from "../backend";
@@ -6,7 +6,7 @@ import type { AppInfo } from "../backend";
 import { RichText } from "../components/RichText";
 import { Button, Chip, IconButton, categories, fieldBox, fieldCaption } from "../components/ui";
 import { fontChoice, textSizeOptions } from "../lib/font";
-import { REPOSITORY, WEBSITE } from "../lib/links";
+import { DONATE, REPOSITORY, WEBSITE } from "../lib/links";
 import { pictureFromFile, signatureHtml } from "../lib/signature";
 import { useLang, useT } from "../lib/useT";
 import { useStore } from "../store";
@@ -937,9 +937,14 @@ function Sponsor() {
         <p className="mt-1 text-[13px] text-ink2">
           {t("about.freeText")}
         </p>
-        <Button className="mt-3" onClick={() => void backend.openLink(REPOSITORY)}>
-          <IconHeart size={16} className="text-danger" /> {t("about.viewGithub")}
-        </Button>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button onClick={() => void backend.openLink(REPOSITORY)}>
+            <IconHeart size={16} className="text-danger" /> {t("about.viewGithub")}
+          </Button>
+          <Button onClick={() => void backend.openLink(DONATE)}>
+            <IconCoffee size={16} className="text-brand" /> {t("about.donate")}
+          </Button>
+        </div>
         <p className="mt-4 text-[13px] text-ink2">
           {t("about.starBefore")}
           <button type="button" className="text-brand underline" onClick={() => void backend.openLink(REPOSITORY)}>

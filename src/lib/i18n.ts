@@ -525,6 +525,7 @@ export const dictionaries: Record<Language, Record<string, string>> = {
     "about.freeTitle": "VN Mail is free and open source.",
     "about.freeText": "No ads and no data to sell. VN Mail is a fork of OpenWren; the code is public, and bug reports and fixes are welcome.",
     "about.viewGithub": "View on GitHub",
+    "about.donate": "Buy the author a coffee",
     "about.starBefore": "A star on ",
     "about.starAfter": " helps others find VN Mail, and costs nothing.",
 
@@ -1057,6 +1058,7 @@ export const dictionaries: Record<Language, Record<string, string>> = {
     "about.freeTitle": "VN Mail miễn phí và mã nguồn mở.",
     "about.freeText": "Không quảng cáo và không có dữ liệu để bán. VN Mail là một bản fork của OpenWren; mã nguồn công khai, và báo cáo lỗi cùng bản sửa luôn được chào đón.",
     "about.viewGithub": "Xem trên GitHub",
+    "about.donate": "Ủng hộ tác giả ly cà phê",
     "about.starBefore": "Một dấu sao trên ",
     "about.starAfter": " giúp người khác tìm thấy VN Mail, mà chẳng tốn gì.",
 

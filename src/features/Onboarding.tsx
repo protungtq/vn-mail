@@ -4,6 +4,7 @@ import {
   IconBrandGoogle,
   IconCheck,
   IconCode,
+  IconCoffee,
   IconEyeOff,
   IconHeart,
   IconLock,
@@ -14,7 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import logo from "../../src-tauri/icons/128x128@2x.png";
 import { backend } from "../backend";
-import { REPOSITORY } from "../lib/links";
+import { DONATE, REPOSITORY } from "../lib/links";
 import { textSizeOptions } from "../lib/font";
 import { useLang, useT } from "../lib/useT";
 import { useStore } from "../store";
@@ -313,13 +314,22 @@ export function Onboarding() {
                     <div className="mt-1 text-[13px] text-ink2">
                       {t("about.freeText")}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void backend.openLink(REPOSITORY)}
-                      className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg border border-edge px-3.5 text-[14px] text-ink hover:bg-hover"
-                    >
-                      <IconHeart size={16} className="text-danger" /> {t("about.viewGithub")}
-                    </button>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void backend.openLink(REPOSITORY)}
+                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-edge px-3.5 text-[14px] text-ink hover:bg-hover"
+                      >
+                        <IconHeart size={16} className="text-danger" /> {t("about.viewGithub")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void backend.openLink(DONATE)}
+                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-edge px-3.5 text-[14px] text-ink hover:bg-hover"
+                      >
+                        <IconCoffee size={16} className="text-brand" /> {t("about.donate")}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </>
