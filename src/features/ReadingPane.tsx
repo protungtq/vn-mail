@@ -38,7 +38,7 @@ import { HtmlBody } from "./HtmlBody";
 import { messageMenu, moveItems, snoozeItems } from "./actions";
 import { mod } from "../lib/keys";
 
-const shell = "min-w-0 flex-1 overflow-y-auto bg-card";
+const shell = "min-w-0 flex-1 overflow-y-auto bg-canvas";
 
 function Centered({ children }: { children: React.ReactNode }) {
   const t = useT();
@@ -382,9 +382,11 @@ export function ReadingPane() {
       .catch((e) => showToast(errorText(e)));
 
   return (
-    <section className={`${shell} flex flex-col px-7 pt-3 pb-5`} aria-label={t("reading.paneLabel")}>
+    <section className={`${shell} flex flex-col px-4 pt-3 pb-4`} aria-label={t("reading.paneLabel")}>
+      {/* The message itself is a white card on the tinted ground, so it reads as one block. */}
+      <div className="min-w-0 flex-none rounded-[14px] border border-edge bg-card px-6 py-5 shadow-[0_1px_3px_rgba(31,31,30,0.06)]">
       {/* The three everyday actions on the left; filing on the right; everything else under "More". */}
-      <div className="mb-2.5 -ml-1.5 flex flex-none items-center gap-0.5 text-ink2" role="toolbar" aria-label={t("reading.actionsLabel")}>
+      <div className="mb-2.5 flex flex-none items-center gap-0.5 text-ink2" role="toolbar" aria-label={t("reading.actionsLabel")}>
         <IconButton label={t("actions.archive")} onClick={() => void moveMessages([m.id], { role: "archive" })}>
           <IconArchive size={19} />
         </IconButton>
@@ -515,6 +517,7 @@ export function ReadingPane() {
       )}
 
       {!isDraft && <QuickReply key={`reply-${m.id}`} to={m.fromName || m.fromAddress} />}
+      </div>
     </section>
   );
 }

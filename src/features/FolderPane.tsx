@@ -319,7 +319,7 @@ export function FolderPane({ width }: { width: number }) {
   // With several accounts, a folder name alone does not say whose it is.
   const owner = (f: Folder) => (accounts.length > 1 ? `${f.name} · ${accounts.find((a) => a.id === f.accountId)?.address ?? ""}` : undefined);
   return (
-    <nav className="flex flex-none flex-col bg-card px-2.5 pt-3.5 pb-2" style={{ width }} aria-label={t("folders.label")}>
+    <nav className="flex flex-none flex-col bg-canvas px-2.5 pt-3.5 pb-2" style={{ width }} aria-label={t("folders.label")}>
       <div className="mb-3 flex flex-none items-center gap-2 pr-0.5 pl-2">
         <img src={logo} alt="" className="size-[22px]" />
         <span className="truncate text-[17px] text-ink">VN Mail</span>
@@ -328,7 +328,7 @@ export function FolderPane({ width }: { width: number }) {
           <IconSettings size={18} stroke={1.6} />
         </button>
       </div>
-      <button type="button" onClick={() => compose()} className="mb-3 flex h-10 w-full flex-none items-center justify-center gap-2 rounded-[10px] bg-soft text-brand hover:brightness-[0.97]">
+      <button type="button" onClick={() => compose()} className="mb-3 flex h-10 w-full flex-none items-center justify-center gap-2 rounded-[10px] bg-brand font-semibold text-white hover:brightness-110">
         <IconPencil size={18} stroke={1.6} />
         {t("common.newMail")}
       </button>

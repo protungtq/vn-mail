@@ -65,7 +65,7 @@ function Row({ m, now, query, onMenu }: { m: MessageSummary; now: Date; query: s
       style={{ paddingTop: "var(--row-pad)", paddingBottom: "var(--row-pad)" }}
       // Rows run edge to edge and are divided by hairlines. Unread mail is bold, with a dot and a blue time;
       // once read, the sender and subject drop to regular weight and the subject turns grey.
-      className={`flex cursor-default gap-3 border-b border-edge px-4 ${open || ticked ? "bg-sel" : "hover:bg-hover"}`}
+      className={`flex cursor-default gap-3 border-b border-edge px-4 ${open ? "bg-sel shadow-[inset_3px_0_0_var(--brand)]" : ticked ? "bg-sel" : "hover:bg-hover"}`}
     >
       <Avatar name={m.fromName} address={m.fromAddress} auth={m.auth} accountId={m.accountId} />
       <div className="min-w-0 flex-1">
@@ -112,7 +112,7 @@ function DraftRow({ d, now }: { d: StoredDraft; now: Date }) {
       onClick={() => openDraft(d.id)}
       onKeyDown={(e) => e.key === "Enter" && openDraft(d.id)}
       style={{ paddingTop: "var(--row-pad)", paddingBottom: "var(--row-pad)" }}
-      className={`group relative flex cursor-default gap-3 border-b border-edge px-4 ${open ? "bg-sel" : "hover:bg-hover"}`}
+      className={`group relative flex cursor-default gap-3 border-b border-edge px-4 ${open ? "bg-sel shadow-[inset_3px_0_0_var(--brand)]" : "hover:bg-hover"}`}
     >
       <Avatar name={d.to || t("drafts.draft")} />
       <div className="min-w-0 flex-1">
