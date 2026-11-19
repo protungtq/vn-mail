@@ -1390,7 +1390,9 @@ fn set_taskbar_overlay(window: &tauri::WebviewWindow, state: &AppState, unread: 
     }
 
     let Ok(hwnd) = window.hwnd() else { return };
-    let hwnd = hwnd.0;
+    // Tauri's HWND wraps a raw pointer in the `windows` crate version it uses,
+    // so cast explicitly like the old WM_SETICON code did.
+    let hwnd = hwnd.0 as isize;
 
     // Overlay icon for the current count; 0 clears the overlay.
     let hicon: HICON = if unread <= 0 {
