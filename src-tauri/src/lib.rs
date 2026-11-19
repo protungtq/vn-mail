@@ -1221,8 +1221,8 @@ fn add_tray_icon(app: &tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
-/// A red dot on the tray and taskbar icons while any inbox has unread mail; the tray tooltip names the count.
-/// Skips repainting when the count has not changed since the last call.
+/// A numbered badge on the taskbar icon (1-9, then 9+) and a red dot on the tray icon while any inbox has unread mail;
+/// the tray tooltip names the count. Skips repainting when the count has not changed since the last call.
 fn refresh_badge(app: &AppHandle) {
     let state = app.state::<AppState>();
     let unread = db::unread_inbox_total(&db::lock(&state.db)).unwrap_or(0);
@@ -1239,7 +1239,20 @@ fn refresh_badge(app: &AppHandle) {
         let _ = tray.set_tooltip(&tooltip);
     }
     if let Some(window) = app.get_webview_window("main") {
-        let bytes: &[u8] = if has_unread { include_bytes!("../icons/icon-unread.png") } else { include_bytes!("../icons/icon.png") };
+        // Pre-rendered numbered icons: the count is baked into the image, like Discord and Zalo.
+        let bytes: &[u8] = match unread {
+            0 => include_bytes!("../icons/icon.png"),
+            1 => include_bytes!("../icons/icon-1.png"),
+            2 => include_bytes!("../icons/icon-2.png"),
+            3 => include_bytes!("../icons/icon-3.png"),
+            4 => include_bytes!("../icons/icon-4.png"),
+            5 => include_bytes!("../icons/icon-5.png"),
+            6 => include_bytes!("../icons/icon-6.png"),
+            7 => include_bytes!("../icons/icon-7.png"),
+            8 => include_bytes!("../icons/icon-8.png"),
+            9 => include_bytes!("../icons/icon-9.png"),
+            _ => include_bytes!("../icons/icon-9plus.png"),
+        };
         if let Ok(icon) = tauri::image::Image::from_bytes(bytes) {
             let _ = window.set_icon(icon);
         }

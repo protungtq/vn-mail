@@ -397,7 +397,7 @@ export const useStore = create<State>((set, get) => {
         }
       });
       set({ accounts, folders, folderId, drafts });
-      // The tray and taskbar icons wear a red dot while any inbox has unread mail.
+      // The taskbar icon wears a numbered badge (1-9, then 9+) and the tray icon a red dot while any inbox has unread mail.
       void backend.updateBadge().catch(() => {});
       await loadList(true);
     },

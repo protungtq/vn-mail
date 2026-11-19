@@ -60,7 +60,7 @@ export interface Backend {
   /** Put the accounts in this order, given as their ids. */
   reorderAccounts(ids: number[]): Promise<void>;
   syncNow(): Promise<void>;
-  /** Repaints the tray and taskbar icons with a red dot while any inbox has unread mail. Desktop only; the preview ignores it. */
+  /** Repaints the taskbar icon with a numbered badge (1-9, then 9+) and the tray icon with a red dot while any inbox has unread mail. Desktop only; the preview ignores it. */
   updateBadge(): Promise<void>;
   /** Lets the user pick the folder the mail database moves to. Null when cancelled. */
   pickDataDir(): Promise<string | null>;
