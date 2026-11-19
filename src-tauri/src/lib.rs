@@ -145,6 +145,9 @@ pub struct AppState {
     tray: std::sync::atomic::AtomicBool,
     /// Unread inbox count currently shown on the tray and taskbar icons.
     badge: std::sync::atomic::AtomicI64,
+    /// Raw Windows icon handle currently set on the window (0 = none). Kept so the previous
+    /// icon can be destroyed after a new one is set; only used on Windows.
+    taskbar_icon: std::sync::atomic::AtomicIsize,
     /// A newer version, once the daily check has found one.
     update: Mutex<Option<updates::Available>>,
     /// Google access tokens per account, with their expiry (Unix seconds).
@@ -1222,22 +1225,14 @@ fn add_tray_icon(app: &tauri::App) -> tauri::Result<()> {
 }
 
 /// A numbered badge on the taskbar icon (1-9, then 9+) and a red dot on the tray icon while any inbox has unread mail;
-/// the tray tooltip names the count. Skips repainting when the count has not changed since the last call.
+/// the tray tooltip names the count. The window icons are repainted on every call; the tray
+/// is only repainted when the count changes.
 fn refresh_badge(app: &AppHandle) {
     let state = app.state::<AppState>();
     let unread = db::unread_inbox_total(&db::lock(&state.db)).unwrap_or(0);
-    if state.badge.swap(unread, std::sync::atomic::Ordering::Relaxed) == unread {
-        return; // same count as shown: the icons are already right
-    }
-    let has_unread = unread > 0;
-    if let Some(tray) = app.tray_by_id("main") {
-        let bytes: &[u8] = if has_unread { include_bytes!("../icons/tray-unread.png") } else { include_bytes!("../icons/tray.png") };
-        if let Ok(icon) = tauri::image::Image::from_bytes(bytes) {
-            let _ = tray.set_icon(Some(icon));
-        }
-        let tooltip = if has_unread { format!("VN Mail ({unread} unread)") } else { "VN Mail".to_string() };
-        let _ = tray.set_tooltip(Some(&tooltip));
-    }
+    // The window icons are (re)applied on every call, not just when the count changes: the
+    // first call runs while the window is still hidden, so only a later call (after the window
+    // is visible) reliably reaches the taskbar.
     if let Some(window) = app.get_webview_window("main") {
         // Pre-rendered numbered icons: the count is baked into the image, like Discord and Zalo.
         let bytes: &[u8] = match unread {
@@ -1255,6 +1250,62 @@ fn refresh_badge(app: &AppHandle) {
         };
         if let Ok(icon) = tauri::image::Image::from_bytes(bytes) {
             let _ = window.set_icon(icon);
+        }
+        #[cfg(target_os = "windows")]
+        set_taskbar_icon(&window, &state, unread);
+    }
+    if state.badge.swap(unread, std::sync::atomic::Ordering::Relaxed) == unread {
+        return; // same count as shown: the tray icon is already right
+    }
+    let has_unread = unread > 0;
+    if let Some(tray) = app.tray_by_id("main") {
+        let bytes: &[u8] = if has_unread { include_bytes!("../icons/tray-unread.png") } else { include_bytes!("../icons/tray.png") };
+        if let Ok(icon) = tauri::image::Image::from_bytes(bytes) {
+            let _ = tray.set_icon(Some(icon));
+        }
+        let tooltip = if has_unread { format!("VN Mail ({unread} unread)") } else { "VN Mail".to_string() };
+        let _ = tray.set_tooltip(Some(&tooltip));
+    }
+}
+
+/// Set the window's big icon — the one Windows shows on the taskbar — from a pre-rendered
+/// numbered .ico. Tauri's `set_icon` only sets the small title-bar icon, which is why the
+/// taskbar never changed. Windows-only; other platforms use `set_icon` alone.
+/// The previous icon handle is destroyed after the new one is set, so repeated calls do not
+/// leak icon handles; the handle itself must stay alive while the window uses it.
+#[cfg(target_os = "windows")]
+fn set_taskbar_icon(window: &tauri::Window, state: &AppState, unread: i64) {
+    use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        CreateIconFromResourceEx, DestroyIcon, SendMessageW, LR_DEFAULTCOLOR, WM_SETICON,
+    };
+    let ico: &[u8] = match unread {
+        0 => include_bytes!("../icons/icon.ico"),
+        1 => include_bytes!("../icons/icon-1.ico"),
+        2 => include_bytes!("../icons/icon-2.ico"),
+        3 => include_bytes!("../icons/icon-3.ico"),
+        4 => include_bytes!("../icons/icon-4.ico"),
+        5 => include_bytes!("../icons/icon-5.ico"),
+        6 => include_bytes!("../icons/icon-6.ico"),
+        7 => include_bytes!("../icons/icon-7.ico"),
+        8 => include_bytes!("../icons/icon-8.ico"),
+        9 => include_bytes!("../icons/icon-9.ico"),
+        _ => include_bytes!("../icons/icon-9plus.ico"),
+    };
+    let Ok(hwnd) = window.hwnd() else { return };
+    let hicon = unsafe {
+        CreateIconFromResourceEx(ico.as_ptr(), ico.len() as u32, 1, 0x00030000, 0, 0, LR_DEFAULTCOLOR)
+    };
+    if hicon == 0 {
+        return;
+    }
+    unsafe {
+        // wParam 1 = ICON_BIG (taskbar), 0 = ICON_SMALL (title bar).
+        SendMessageW(hwnd.0 as isize, WM_SETICON, 1 as WPARAM, hicon as LPARAM);
+        SendMessageW(hwnd.0 as isize, WM_SETICON, 0 as WPARAM, hicon as LPARAM);
+        let old = state.taskbar_icon.swap(hicon, std::sync::atomic::Ordering::Relaxed);
+        if old != 0 {
+            DestroyIcon(old);
         }
     }
 }
@@ -1798,6 +1849,7 @@ pub fn run() {
                 outbox_wake: Notify::new(),
                 tray: Default::default(),
                 badge: Default::default(),
+                taskbar_icon: Default::default(),
                 update: Default::default(),
                 tokens: Default::default(),
             });
