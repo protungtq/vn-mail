@@ -183,6 +183,7 @@ export function App() {
   const welcome = useStore((s) => s.welcome);
 
   const theme = useStore((s) => s.settings.theme ?? "system");
+  const colorTheme = useStore((s) => s.settings.color_theme ?? "default");
   const density = useStore((s) => s.settings.density ?? "cozy");
 
   useEffect(() => {
@@ -204,12 +205,17 @@ export function App() {
   }, [font, systemFont, textSize]);
 
   // Theme and density are attributes on <html>; the stylesheet does the rest.
+  // A color theme carries its own light/dark nature, so it also decides the
+  // effective theme; the theme setting is the fallback when no color is picked.
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "system") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", theme);
+    const effectiveTheme = colorTheme === "charcoal" ? "dark" : colorTheme === "default" ? theme : "light";
+    if (effectiveTheme === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", effectiveTheme);
+    if (colorTheme === "default") root.removeAttribute("data-color-theme");
+    else root.setAttribute("data-color-theme", colorTheme);
     root.setAttribute("data-density", density);
-  }, [theme, density]);
+  }, [theme, density, colorTheme]);
 
   // The document language follows the interface language, for screen readers and spell-checking.
   useEffect(() => {

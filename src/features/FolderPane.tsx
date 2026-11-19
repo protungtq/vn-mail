@@ -328,7 +328,7 @@ export function FolderPane({ width }: { width: number }) {
           <IconSettings size={18} stroke={1.6} />
         </button>
       </div>
-      <button type="button" onClick={() => compose()} className="mb-3 flex h-10 w-full flex-none items-center justify-center gap-2 rounded-[10px] bg-brand font-semibold text-white hover:brightness-110">
+      <button type="button" onClick={() => compose()} className="mb-3 flex h-10 w-full flex-none items-center justify-center gap-2 rounded-[10px] bg-brand font-semibold text-on-brand hover:brightness-110">
         <IconPencil size={18} stroke={1.6} />
         {t("common.newMail")}
       </button>

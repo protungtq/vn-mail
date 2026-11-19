@@ -508,6 +508,19 @@ function Appearance() {
         ]}
       />
       <Options
+        label={t("settings.colorTheme")}
+        value={settings.color_theme ?? "default"}
+        onChange={(v) => void setSetting("color_theme", v)}
+        options={[
+          ["default", t("settings.colorDefault")],
+          ["jade", t("settings.colorJade")],
+          ["lavender", t("settings.colorLavender")],
+          ["amber", t("settings.colorAmber")],
+          ["terracotta", t("settings.colorTerracotta")],
+          ["charcoal", t("settings.colorCharcoal")],
+        ]}
+      />
+      <Options
         label={t("settings.focusedInbox")}
         value={settings.focused_inbox === "off" ? "off" : "on"}
         onChange={(v) => void setSetting("focused_inbox", v)}

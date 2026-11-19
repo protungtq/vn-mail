@@ -403,7 +403,7 @@ export const useStore = create<State>((set, get) => {
     },
 
     loadPreferences: async () => {
-      const keys = ["theme", "density", "body_days", "sync_interval_minutes", "notifications", "undo_seconds", "google_client_id", "google_client_secret", "block_trackers", "phishing_warnings", "brand_logos", "close_to_tray", "start_at_login", "focused_inbox", "image_senders", "blocked_senders", "font", "text_size", "time_format", "language", "onboarded", "usage_stats", "update_check", "thread_collapsed", "seen_version"];
+      const keys = ["theme", "color_theme", "density", "body_days", "sync_interval_minutes", "notifications", "undo_seconds", "google_client_id", "google_client_secret", "block_trackers", "phishing_warnings", "brand_logos", "close_to_tray", "start_at_login", "focused_inbox", "image_senders", "blocked_senders", "font", "text_size", "time_format", "language", "onboarded", "usage_stats", "update_check", "thread_collapsed", "seen_version"];
       const [signatures, signatureDefaults, values] = await Promise.all([
         backend.listSignatures(),
         backend.signatureDefaults(),

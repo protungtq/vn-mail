@@ -8,6 +8,7 @@
 :root {
   color-scheme: light;
   --brand: #256ef3;
+  --on-brand: #ffffff;
   --soft: #e4edfe;
   --on-soft: #256ef3;
   --line: #a9c4fb;
@@ -34,6 +35,7 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --brand: #7da7ff;
+    --on-brand: #ffffff;
     --soft: #1c3160;
     --on-soft: #cfe0ff;
     --line: #3f6fd6;
@@ -60,6 +62,7 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --brand: #7da7ff;
+  --on-brand: #ffffff;
   --soft: #1c3160;
   --on-soft: #cfe0ff;
   --line: #3f6fd6;
@@ -82,8 +85,142 @@
   --on-warn: #ffd58a;
 }
 
+/* Five color themes from the Nov 2026 mockups. Each block overrides the base
+   light/dark tokens; the theme also decides light vs dark, so color-scheme is
+   set here too. Placed after the base blocks so equal-specificity rules win. */
+:root[data-color-theme="jade"] {
+  color-scheme: light;
+  --brand: #026f60;
+  --soft: #c9e7e0;
+  --on-soft: #005d53;
+  --line: #8dbeb7;
+  --dot: #026f60;
+  --title: #c9e7e0;
+  --on-title: #026f60;
+  --canvas: #d8ede7;
+  --card: #fbfefd;
+  --sel: #d3ebe5;
+  --hover: #e9f4f0;
+  --text: #101f1c;
+  --text2: #5a6e6a;
+  --text3: #8b9b97;
+  --border: #bed1cb;
+  --chip: #d6ebe6;
+  --mark: #ffe9a8;
+  --danger: #c62828;
+  --warn: #fbe2ac;
+  --warn-line: #f0c36d;
+  --on-warn: #6b4200;
+  --on-brand: #ffffff;
+}
+
+:root[data-color-theme="lavender"] {
+  color-scheme: light;
+  --brand: #6141a0;
+  --soft: #dccdee;
+  --on-soft: #4a24a3;
+  --line: #a68fd0;
+  --dot: #6141a0;
+  --title: #dccdee;
+  --on-title: #6141a0;
+  --canvas: #e1daef;
+  --card: #fdfafe;
+  --sel: #e8daf6;
+  --hover: #f0eaf8;
+  --text: #1e1526;
+  --text2: #6a637e;
+  --text3: #9a92a8;
+  --border: #c9bfe0;
+  --chip: #e6ddf3;
+  --mark: #ffe9a8;
+  --danger: #c62828;
+  --warn: #fbe2ac;
+  --warn-line: #f0c36d;
+  --on-warn: #6b4200;
+  --on-brand: #ffffff;
+}
+
+:root[data-color-theme="amber"] {
+  color-scheme: light;
+  --brand: #944701;
+  --soft: #fddeaa;
+  --on-soft: #792a00;
+  --line: #c08a4d;
+  --dot: #944701;
+  --title: #fddeaa;
+  --on-title: #944701;
+  --canvas: #ecd7b9;
+  --card: #fef8ed;
+  --sel: #fee0ad;
+  --hover: #f8ecd6;
+  --text: #261b11;
+  --text2: #7a6c5d;
+  --text3: #a79a8c;
+  --border: #d9c1a0;
+  --chip: #f2e3d0;
+  --mark: #ffe9a8;
+  --danger: #c62828;
+  --warn: #fbe2ac;
+  --warn-line: #f0c36d;
+  --on-warn: #6b4200;
+  --on-brand: #ffffff;
+}
+
+:root[data-color-theme="terracotta"] {
+  color-scheme: light;
+  --brand: #984848;
+  --soft: #f3cecc;
+  --on-soft: #863332;
+  --line: #c08d8a;
+  --dot: #984848;
+  --title: #f3cecc;
+  --on-title: #984848;
+  --canvas: #ebcbc4;
+  --card: #fef7f6;
+  --sel: #f6d2d0;
+  --hover: #f6e3e0;
+  --text: #26161a;
+  --text2: #6e5b60;
+  --text3: #a08e91;
+  --border: #d8b3ac;
+  --chip: #f1dcd9;
+  --mark: #ffe9a8;
+  --danger: #c62828;
+  --warn: #fbe2ac;
+  --warn-line: #f0c36d;
+  --on-warn: #6b4200;
+  --on-brand: #ffffff;
+}
+
+:root[data-color-theme="charcoal"] {
+  color-scheme: dark;
+  --brand: #bfe56b;
+  --soft: #3e4933;
+  --on-soft: #d8f99c;
+  --line: #6f8f4b;
+  --dot: #bfe56b;
+  --title: #3e4933;
+  --on-title: #bfe56b;
+  --canvas: #1e2421;
+  --card: #2e3431;
+  --sel: #394330;
+  --hover: #2a302b;
+  --text: #eef2ee;
+  --text2: #a9afa9;
+  --text3: #7f867f;
+  --border: #39413a;
+  --chip: #333934;
+  --mark: #5c4a00;
+  --danger: #ff8a80;
+  --warn: #3a2a0a;
+  --warn-line: #7a5a16;
+  --on-warn: #ffd58a;
+  --on-brand: #1c2b12;
+}
+
 @theme inline {
   --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
   --color-soft: var(--soft);
   --color-on-soft: var(--on-soft);
   --color-line: var(--line);
