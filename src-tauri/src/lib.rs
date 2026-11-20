@@ -248,7 +248,7 @@ async fn return_session(state: &AppState, account_id: i64, session: Session) {
 // ---------- background sync ----------
 
 /// What a tap on a new-mail notification opens: the message, in its folder.
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct OpenMessage {
     message_id: i64,
