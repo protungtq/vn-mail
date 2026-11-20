@@ -816,7 +816,7 @@ function Updates({ version }: { version: string }) {
     setState("installing");
     setError("");
     try {
-      await backend.installUpdate(); // VN Mail quits so the installer can replace it
+      await backend.installUpdate(); // VN Mail restarts when this succeeds
     } catch (e) {
       setError(errorText(e));
       setState("idle");

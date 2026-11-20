@@ -56,6 +56,17 @@
     ]
   },
   "identifier": "asia.so1.vnmail",
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/protungtq/vn-mail/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI2RjE2RjA2NzhERjM5RjMKUldUek9kOTRCbS94dHB2M09XeERqcXR0S3RjdEdtYlFpK2UxdzNCTE4zaW1FbmNUTGhBSzJzeG4K",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "productName": "VN Mail",
   "version": "0.1.13"
 }

@@ -1812,21 +1812,18 @@ async fn check_update(app: AppHandle) -> Result<Option<updates::Available>> {
     find_update(&app).await
 }
 
-/// Download the newer version, check it against the release's SHA-256 list,
-/// open the installer and quit, so the installer can replace VN Mail.
-/// Only for installations the app fetches itself; apt and dnf do their own.
+/// Download the newer version, check its signature, install it and start it.
+/// Only for installations the app updates itself; apt and dnf do their own.
 #[tauri::command]
 async fn install_update(app: AppHandle) -> Result<()> {
-    let found = app.state::<AppState>().update.lock().unwrap_or_else(|e| e.into_inner()).clone();
-    let found = found.ok_or(Error("Check for a newer version first.".into()))?;
-    if found.how != "install" {
-        return Err(Error("This copy of VN Mail is updated another way, not by downloading an installer.".into()));
+    use tauri_plugin_updater::UpdaterExt;
+    if updates::how(&stats::package_kind()) != "install" {
+        return Err(Error("This copy of VN Mail is updated by your system, not by the app.".into()));
     }
-    let path = updates::download(&app, &found).await?;
-    updates::open(&app, &path)?;
-    // The installer replaces VN Mail, so quit first: its files are in use while it runs.
-    app.exit(0);
-    Ok(())
+    let failed = |e: tauri_plugin_updater::Error| Error(format!("The update could not be installed: {e}"));
+    let update = app.updater().map_err(failed)?.check().await.map_err(failed)?.ok_or(Error("You already have the newest version.".into()))?;
+    update.download_and_install(|_, _| {}, || {}).await.map_err(failed)?;
+    app.restart()
 }
 
 /// How long an opened attachment stays in the temporary folder.
@@ -1986,6 +1983,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let usual = app.path().app_data_dir()?;
             adopt_old_data(&usual);

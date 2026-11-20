@@ -1,27 +1,24 @@
-//! Knowing when a newer VN Mail exists, and fetching it for the user to install.
+//! Knowing when a newer VN Mail exists, and installing it where the app can.
 //!
-//! The check reads the newest public release on GitHub: no update server, no
-//! signing key. When a newer version exists, the app downloads the installer
-//! for this computer, checks it against the release's SHA-256 list, opens it
-//! and quits, so the installer can replace VN Mail. Installing itself is then
-//! up to the user, like any download.
+//! Each release publishes one small public file, `latest.json`, with the
+//! newest version and a signature for every installer. The check below reads
+//! that file; when a newer version exists, the app installs it itself through
+//! the Tauri updater plugin, which refuses any file whose signature was not
+//! made with the update key — the public half of that key is built into the
+//! app (tauri.conf.json).
 //!
 //! What happens next depends on how VN Mail was installed:
 //! - apt or dnf: the system's own updates install it; the app only says so.
-//! - AppImage, Windows, macOS: the app downloads the installer (see above).
+//! - AppImage, Windows, macOS: the app downloads and installs the update
+//!   itself, then starts the new version.
 //! - anything else (run from a build folder): a link to the download page.
 
-use std::path::{Path, PathBuf};
-
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use tauri::{AppHandle, Manager};
-use tokio::io::AsyncWriteExt;
 
 use crate::error::{Error, Result};
 
-/// The newest public release of VN Mail on GitHub.
-const RELEASES: &str = "https://api.github.com/repos/protungtq/vn-mail/releases/latest";
+/// The newest release's version file, served as a GitHub release asset.
+pub const MANIFEST: &str = "https://github.com/protungtq/vn-mail/releases/latest/download/latest.json";
 
 /// What the interface shows when a newer version exists.
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -30,32 +27,17 @@ pub struct Available {
     pub version: String,
     /// One line about the release, or empty.
     pub notes: String,
-    /// "system" (apt or dnf installs it), "install" (the app downloads it) or "download" (the download page).
+    /// "system" (apt or dnf installs it), "install" (the app can) or "download" (the download page).
     pub how: &'static str,
-    /// How this copy was installed: "deb", "rpm", "appimage", "dmg", "exe" or "other".
+    /// How it was installed: "deb", "rpm", "appimage", "dmg", "exe" or "other".
     pub package: String,
-    /// The installer to download, or empty when the download page is the way.
-    pub download_url: String,
-    /// The file the installer is saved as.
-    pub file_name: String,
-    /// The release's SHA-256 list, for checking the download.
-    pub sums_url: String,
-}
-
-/// One release from the GitHub API, with only the fields the check reads.
-#[derive(Deserialize)]
-struct Release {
-    tag_name: String,
-    #[serde(default)]
-    body: Option<String>,
-    #[serde(default)]
-    assets: Vec<Asset>,
 }
 
 #[derive(Deserialize)]
-struct Asset {
-    name: String,
-    browser_download_url: String,
+struct Manifest {
+    version: String,
+    #[serde(default)]
+    notes: String,
 }
 
 /// The three numbers of a version such as "0.1.4"; None for anything else.
@@ -79,53 +61,17 @@ pub fn how(package: &str) -> &'static str {
     }
 }
 
-/// The installer file for this kind of installation, by file name.
-fn installer_suffix(package: &str) -> Option<&'static str> {
-    match package {
-        "exe" => Some("-setup.exe"),
-        "dmg" => Some(".dmg"),
-        "appimage" => Some(".AppImage"),
-        "deb" => Some(".deb"),
-        "rpm" => Some(".rpm"),
-        _ => None,
-    }
-}
-
-/// The first line of the release notes, cut to what is shown.
-fn first_line(body: &str) -> String {
-    body.lines()
-        .map(|line| line.trim().trim_start_matches(['#', '-', ' ']).trim())
-        .find(|line| !line.is_empty())
-        .unwrap_or("")
-        .chars()
-        .filter(|c| !c.is_control())
-        .take(300)
-        .collect()
-}
-
-/// Turn a release into what the interface shows, or None when this version is current.
-fn parse_release(release: &Release, current: &str, package: &str) -> Option<Available> {
-    let version = release.tag_name.trim().trim_start_matches('v').to_string();
-    if !newer(&version, current) {
+/// Read the version file. The text comes from the internet, so it is cut to what is shown.
+fn read(body: &str, current: &str, package: &str) -> Option<Available> {
+    let manifest: Manifest = serde_json::from_str(body).ok()?;
+    if !newer(&manifest.version, current) {
         return None;
     }
-    let notes = first_line(release.body.as_deref().unwrap_or_default());
-    let sums_url = release
-        .assets
-        .iter()
-        .find(|a| a.name == "SHA256SUMS")
-        .map(|a| a.browser_download_url.clone())
-        .unwrap_or_default();
-    let installer = installer_suffix(package)
-        .and_then(|suffix| release.assets.iter().find(|a| a.name.ends_with(suffix)));
-    let (download_url, file_name) = match installer {
-        Some(asset) => (asset.browser_download_url.clone(), asset.name.clone()),
-        None => (String::new(), String::new()),
-    };
-    Some(Available { version, notes, how: how(package), package: package.to_string(), download_url, file_name, sums_url })
+    let notes: String = manifest.notes.chars().filter(|c| !c.is_control()).take(300).collect();
+    Some(Available { version: manifest.version.trim().trim_start_matches('v').to_string(), notes, how: how(package), package: package.to_string() })
 }
 
-/// Ask GitHub whether a newer version exists. None when this one is current.
+/// Ask whether a newer version exists. None when this one is current.
 pub async fn check(current: &str) -> Result<Option<Available>> {
     let package = crate::stats::package_kind();
     let client = reqwest::Client::builder()
@@ -133,117 +79,22 @@ pub async fn check(current: &str) -> Result<Option<Available>> {
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| Error(format!("Could not check for a newer version: {e}")))?;
-    let release: Release = client
-        .get(RELEASES)
-        .header("Accept", "application/vnd.github+json")
+    let body = client
+        .get(MANIFEST)
         .send()
         .await
-        .map_err(|e| Error(format!("Could not reach GitHub to check for a newer version: {e}")))?
+        .map_err(|e| Error(format!("Could not reach the update server to check for a newer version: {e}")))?
         .error_for_status()
-        .map_err(|e| Error(format!("GitHub did not answer the version check: {e}")))?
-        .json()
-        .await
-        .map_err(|e| Error(format!("GitHub's answer could not be read: {e}")))?;
-    Ok(parse_release(&release, current, &package))
-}
-
-/// The hash listed for `file` in a `sha256sum` list, if any. The file name
-/// itself can hold spaces, so only the first gap separates hash from name.
-fn expected_hash(sums: &str, file: &str) -> Option<String> {
-    sums.lines().find_map(|line| {
-        let (hash, rest) = line.split_once(char::is_whitespace)?;
-        let name = rest.trim_start().trim_start_matches('*');
-        (name == file).then(|| hash.to_lowercase())
-    })
-}
-
-/// Download the installer, check it against the release's SHA-256 list and
-/// return where it was saved. The file goes to Downloads, where the user can
-/// find it again.
-pub async fn download(app: &AppHandle, found: &Available) -> Result<PathBuf> {
-    if found.download_url.is_empty() || found.file_name.is_empty() {
-        return Err(Error("There is no installer file for this computer in the newest release.".into()));
-    }
-    let dir = app
-        .path()
-        .download_dir()
-        .or_else(|_| app.path().temp_dir())
-        .map_err(|e| Error(format!("Could not find a folder for the download: {e}")))?;
-    tokio::fs::create_dir_all(&dir)
-        .await
-        .map_err(|e| Error(format!("Could not make a folder for the download: {e}")))?;
-    let path = dir.join(&found.file_name);
-    let client = reqwest::Client::builder()
-        .user_agent("VN Mail")
-        .timeout(std::time::Duration::from_secs(300))
-        .build()
-        .map_err(|e| Error(format!("Could not download the new version: {e}")))?;
-    let response = client
-        .get(&found.download_url)
-        .send()
-        .await
-        .map_err(|e| Error(format!("Could not download the new version: {e}")))?
-        .error_for_status()
-        .map_err(|e| Error(format!("The download did not start: {e}")))?;
-    // One whole file in memory: the installers are a few megabytes.
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| Error(format!("The download stopped halfway: {e}")))?;
-    let mut file = tokio::fs::File::create(&path)
-        .await
-        .map_err(|e| Error(format!("Could not save the download: {e}")))?;
-    file.write_all(&bytes)
-        .await
-        .map_err(|e| Error(format!("Could not save the download: {e}")))?;
-    file.flush().await.map_err(|e| Error(format!("Could not save the download: {e}")))?;
-    drop(file);
-    let hash = Sha256::digest(&bytes);
-    if found.sums_url.is_empty() {
-        let _ = tokio::fs::remove_file(&path).await;
-        return Err(Error("The newest release has no checksum list, so the download was not trusted.".into()));
-    }
-    let sums = client
-        .get(&found.sums_url)
-        .send()
-        .await
-        .map_err(|e| Error(format!("Could not read the checksum list: {e}")))?
-        .error_for_status()
-        .map_err(|e| Error(format!("Could not read the checksum list: {e}")))?
+        .map_err(|e| Error(format!("The update server did not answer the version check: {e}")))?
         .text()
         .await
-        .map_err(|e| Error(format!("Could not read the checksum list: {e}")))?;
-    let want = expected_hash(&sums, &found.file_name)
-        .ok_or_else(|| Error("The newest release has no checksum for its installer, so the download was not trusted.".into()))?;
-    let got: String = hash.iter().map(|b| format!("{b:02x}")).collect();
-    if got != want {
-        let _ = tokio::fs::remove_file(&path).await;
-        return Err(Error("The download does not match its checksum, so it was deleted.".into()));
-    }
-    Ok(path)
-}
-
-/// Open the downloaded installer, so the system installs it.
-pub fn open(app: &AppHandle, path: &Path) -> Result<()> {
-    use tauri_plugin_opener::OpenerExt;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755));
-    }
-    app.opener()
-        .open_path(path.to_string_lossy(), None::<&str>)
-        .map_err(|e| Error(format!("The installer could not be opened: {e}")))?;
-    Ok(())
+        .map_err(|e| Error(format!("The update server's answer could not be read: {e}")))?;
+    Ok(read(&body, current, &package))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn release(json: &str) -> Release {
-        serde_json::from_str(json).expect("the test release is valid JSON")
-    }
 
     #[test]
     fn compares_versions_by_number() {
@@ -267,54 +118,11 @@ mod tests {
     }
 
     #[test]
-    fn reads_the_newest_release() {
-        let found = parse_release(
-            &release(r###"{"tag_name":"v0.1.14","body":"## What's new\n\n- Faster search.\n- More.","assets":[{"name":"VN Mail_0.1.14_x64-setup.exe","browser_download_url":"https://example.com/setup.exe"},{"name":"SHA256SUMS","browser_download_url":"https://example.com/SHA256SUMS"}]}"###),
-            "0.1.13",
-            "exe",
-        )
-        .unwrap();
-        assert_eq!(
-            found,
-            Available {
-                version: "0.1.14".into(),
-                notes: "What's new".into(),
-                how: "install",
-                package: "exe".into(),
-                download_url: "https://example.com/setup.exe".into(),
-                file_name: "VN Mail_0.1.14_x64-setup.exe".into(),
-                sums_url: "https://example.com/SHA256SUMS".into(),
-            }
-        );
-        let same = parse_release(&release(r#"{"tag_name":"v0.1.13","body":"","assets":[]}"#), "0.1.13", "exe");
-        assert!(same.is_none(), "already current");
-        let no_installer = parse_release(
-            &release(r#"{"tag_name":"v0.1.14","body":"","assets":[{"name":"SHA256SUMS","browser_download_url":"https://example.com/SHA256SUMS"}]}"#),
-            "0.1.13",
-            "exe",
-        )
-        .unwrap();
-        assert_eq!(no_installer.how, "install", "the kind still decides the way");
-        assert!(no_installer.download_url.is_empty(), "no installer file in the release");
-        let system = parse_release(
-            &release(r#"{"tag_name":"v0.1.14","body":"","assets":[{"name":"vnmail_0.1.14_amd64.deb","browser_download_url":"https://example.com/vnmail.deb"}]}"#),
-            "0.1.13",
-            "deb",
-        )
-        .unwrap();
-        assert_eq!(system.how, "system");
-        assert_eq!(system.file_name, "vnmail_0.1.14_amd64.deb");
-    }
-
-    #[test]
-    fn checks_the_checksum_list() {
-        let sums = "98c536e03c72ea23c5764786eb56a743cf1a603059197ef1b484200653f83ca2  VN Mail_0.1.13_x64-setup.exe\nabcdef  *other.bin\n";
-        assert_eq!(
-            expected_hash(sums, "VN Mail_0.1.13_x64-setup.exe").as_deref(),
-            Some("98c536e03c72ea23c5764786eb56a743cf1a603059197ef1b484200653f83ca2")
-        );
-        assert_eq!(expected_hash(sums, "other.bin").as_deref(), Some("abcdef"), "the star is not part of the name");
-        assert!(expected_hash(sums, "missing.exe").is_none());
-        assert!(expected_hash("not a list", "x").is_none());
+    fn reads_the_version_file() {
+        let found = read(r#"{"version":"0.2.0","notes":"Faster search.\nMore.","platforms":{}}"#, "0.1.3", "deb").unwrap();
+        assert_eq!(found, Available { version: "0.2.0".into(), notes: "Faster search.More.".into(), how: "system", package: "deb".into() });
+        assert!(read(r#"{"version":"0.1.3"}"#, "0.1.3", "deb").is_none(), "already current");
+        assert!(read("not json", "0.1.3", "deb").is_none());
+        assert_eq!(read(&format!(r#"{{"version":"9.0.0","notes":"{}"}}"#, "x".repeat(900)), "0.1.3", "exe").unwrap().notes.len(), 300);
     }
 }
