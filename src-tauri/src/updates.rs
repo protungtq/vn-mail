@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn reads_the_newest_release() {
         let found = parse_release(
-            &release(r#"{"tag_name":"v0.1.14","body":"## What's new\n\n- Faster search.\n- More.","assets":[{"name":"VN Mail_0.1.14_x64-setup.exe","browser_download_url":"https://example.com/setup.exe"},{"name":"SHA256SUMS","browser_download_url":"https://example.com/SHA256SUMS"}]}"#),
+            &release(r###"{"tag_name":"v0.1.14","body":"## What's new\n\n- Faster search.\n- More.","assets":[{"name":"VN Mail_0.1.14_x64-setup.exe","browser_download_url":"https://example.com/setup.exe"},{"name":"SHA256SUMS","browser_download_url":"https://example.com/SHA256SUMS"}]}"###),
             "0.1.13",
             "exe",
         )
