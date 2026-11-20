@@ -60,6 +60,28 @@ function trackerNote(pixels: number, links: number): string | undefined {
   return parts.length ? translate("privacy.trackerNote", { parts: parts.join(", ") }) : undefined;
 }
 
+/** Languages a message can be translated into. Names are shown in their own
+ * language, so no translation keys are needed for them. Both translation
+ * services (Google, MyMemory) accept these codes. */
+const TARGET_LANGS: { code: string; name: string }[] = [
+  { code: "vi", name: "Tiếng Việt" },
+  { code: "en", name: "English" },
+  { code: "zh-CN", name: "中文（简体）" },
+  { code: "zh-TW", name: "中文（繁體）" },
+  { code: "ja", name: "日本語" },
+  { code: "ko", name: "한국어" },
+  { code: "fr", name: "Français" },
+  { code: "de", name: "Deutsch" },
+  { code: "es", name: "Español" },
+  { code: "it", name: "Italiano" },
+  { code: "pt", name: "Português" },
+  { code: "ru", name: "Русский" },
+  { code: "th", name: "ไทย" },
+  { code: "id", name: "Bahasa Indonesia" },
+  { code: "ar", name: "العربية" },
+  { code: "hi", name: "हिन्दी" },
+];
+
 /** The colour categories as one row of dots; a click switches a colour on or off. */
 function CategoryRow({ m, close }: { m: { id: number; categories: string[] }; close: () => void }) {
   const t = useT();
@@ -294,8 +316,11 @@ export function ReadingPane() {
   const now = useMemo(() => new Date(), [m]);
 
   // In-mail translation: Google first, MyMemory as fallback (see translate.rs).
-  // The target is the interface language; the text is sent only when pressed.
+  // The target defaults to the interface language; the reader can pick
+  // another one in the toolbar. The text is sent only when translating.
   const lang = useLang();
+  const [targetLang, setTargetLang] = useState<string | null>(null);
+  const target = targetLang ?? lang;
   const [translation, setTranslation] = useState<{ text: string; provider: string } | null>(null);
   const [translating, setTranslating] = useState(false);
   const [translateFailed, setTranslateFailed] = useState(false);
@@ -304,23 +329,31 @@ export function ReadingPane() {
     setTranslating(false);
     setTranslateFailed(false);
   }, [m?.id]);
-  const translateBody = async () => {
+  const runTranslation = async (to: string) => {
     if (!m || translating) return;
-    if (translation) {
-      setTranslation(null);
-      return;
-    }
     if (!m.plain.trim()) return;
     setTranslating(true);
     setTranslateFailed(false);
     try {
-      setTranslation(await backend.translateText(m.plain, lang));
+      setTranslation(await backend.translateText(m.plain, to));
     } catch (e) {
       setTranslateFailed(true);
       showToast(errorText(e));
     } finally {
       setTranslating(false);
     }
+  };
+  const translateBody = async () => {
+    if (translation) {
+      setTranslation(null);
+      return;
+    }
+    await runTranslation(target);
+  };
+  const pickTarget = (to: string) => {
+    setTargetLang(to);
+    // A translation already on screen follows the new target at once.
+    if (translation) void runTranslation(to);
   };
 
   if (draft) return <Composer key={`${draft.id ?? "new"}-${draft.inReplyTo}-${draft.subject}`} className={shell} />;
@@ -438,6 +471,20 @@ export function ReadingPane() {
           </IconButton>
         )}
         <div className="ml-auto flex items-center gap-0.5">
+          <select
+            aria-label={t("reading.translateTo")}
+            title={t("reading.translateTo")}
+            value={target}
+            disabled={translating}
+            onChange={(e) => pickTarget(e.target.value)}
+            className="h-8 max-w-36 rounded-lg border border-edge bg-card px-1.5 text-xs text-ink2 outline-none hover:bg-hover focus:border-line"
+          >
+            {TARGET_LANGS.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.name}
+              </option>
+            ))}
+          </select>
           <IconButton
             label={translating ? t("reading.translating") : t("reading.translate")}
             active={translation !== null && translation.provider !== "same"}
