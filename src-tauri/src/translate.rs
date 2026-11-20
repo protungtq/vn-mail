@@ -49,6 +49,23 @@ fn chunks(text: &str, limit: usize) -> Vec<String> {
     out
 }
 
+/// Percent-encode a query value: everything except the unreserved
+/// characters (letters, digits, `-_.~`) becomes %XX, UTF-8 byte by byte.
+/// Hand-rolled because reqwest here runs with `default-features = false`
+/// and no `query` feature, so `RequestBuilder::query` does not exist.
+fn encode(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for &b in value.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
+}
+
 /// Read Google's answer: the translated sentences live in the first array,
 /// the detected source language (when present) in the third slot.
 fn parse_google(body: &str) -> Option<(String, Option<String>)> {
@@ -72,19 +89,17 @@ async fn via_google(
     client: &reqwest::Client,
     text: &str,
     target: &str,
-) -> Result<(String, Option<String>), Error> {
+) -> Result<(String, Option<String>)> {
     let mut out = String::new();
     let mut source: Option<String> = None;
+    let target = encode(target);
     for chunk in chunks(text, 4000) {
+        let url = format!(
+            "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={target}&dt=t&q={}",
+            encode(&chunk),
+        );
         let body = client
-            .get("https://translate.googleapis.com/translate_a/single")
-            .query(&[
-                ("client", "gtx"),
-                ("sl", "auto"),
-                ("tl", target),
-                ("dt", "t"),
-                ("q", chunk.as_str()),
-            ])
+            .get(url)
             .send()
             .await
             .map_err(|e| Error(format!("Google Translate did not answer: {e}")))?
@@ -121,13 +136,16 @@ fn parse_mymemory(body: &str) -> Option<String> {
 }
 
 /// Translate with MyMemory, chunk by chunk (its GET requests take ~400 characters).
-async fn via_mymemory(client: &reqwest::Client, text: &str, target: &str) -> Result<String, Error> {
-    let langpair = format!("auto|{target}");
+async fn via_mymemory(client: &reqwest::Client, text: &str, target: &str) -> Result<String> {
+    let langpair = encode(&format!("auto|{target}"));
     let mut out = String::new();
     for chunk in chunks(text, 400) {
+        let url = format!(
+            "https://api.mymemory.translated.net/get?q={}&langpair={langpair}",
+            encode(&chunk),
+        );
         let body = client
-            .get("https://api.mymemory.translated.net/get")
-            .query(&[("q", chunk.as_str()), ("langpair", langpair.as_str())])
+            .get(url)
             .send()
             .await
             .map_err(|e| Error(format!("MyMemory did not answer: {e}")))?
@@ -147,7 +165,7 @@ async fn via_mymemory(client: &reqwest::Client, text: &str, target: &str) -> Res
 /// when Google fails. When the text is already in the target language the
 /// original comes back with provider "same", so the reader can say so.
 #[tauri::command]
-pub async fn translate_text(text: String, target: String) -> Result<Translation, Error> {
+pub async fn translate_text(text: String, target: String) -> Result<Translation> {
     if text.trim().is_empty() {
         return Ok(Translation {
             text,
@@ -216,6 +234,14 @@ mod tests {
     fn mymemory_quota_warning_rejected() {
         let body = r###"{"responseData":{"translatedText":"MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY"},"responseStatus":429}"###;
         assert!(parse_mymemory(body).is_none());
+    }
+
+    #[test]
+    fn encode_keeps_safe_chars_and_escapes_the_rest() {
+        assert_eq!(encode("vi"), "vi");
+        assert_eq!(encode("auto|vi"), "auto%7Cvi");
+        assert_eq!(encode("Xin chào!"), "Xin%20ch%C3%A0o%21");
+        assert_eq!(encode("a&b=c"), "a%26b%3Dc");
     }
 
     #[test]
