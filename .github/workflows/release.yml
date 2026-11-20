@@ -1,9 +1,11 @@
 name: Release
 
 # A tag such as v0.2.0 builds VN Mail for Linux, Windows and macOS and
-# publishes a GitHub Release with the packages. VN Mail has no in-app
-# updater and no package repository, so there is no signing step and no
-# upload anywhere else: a new release is just the files on the release page.
+# publishes a GitHub Release with the packages. The publish job also signs
+# the updatable packages with the update key and writes latest.json, so the
+# app itself can offer the new version (Cài đặt → Giới thiệu → Kiểm tra ngay)
+# and install it after checking the signature. The private key lives only in
+# the TAURI_SIGNING_PRIVATE_KEY secret; the build jobs never see it.
 
 on:
   push:
@@ -177,8 +179,10 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  # Publishes what the build jobs produced as a GitHub Release. It needs no
-  # secrets beyond the built-in token, and runs only this repository's own steps.
+  # Publishes what the build jobs produced as a GitHub Release, signs the
+  # packages the in-app updater installs, and writes latest.json for it.
+  # This is the only job that touches the update key: the build jobs run
+  # third-party build code and get no secrets.
   publish:
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-22.04
@@ -203,6 +207,33 @@ jobs:
           rm SHA256SUMS.linux SHA256SUMS.windows SHA256SUMS.macos
           cat SHA256SUMS
 
+      # The Tauri CLI signs with the update key from the environment.
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - run: pnpm install --frozen-lockfile
+
+      # Signs the Windows installer, the macOS app archive and the AppImage,
+      # then writes latest.json (the file the app checks) with their
+      # signatures and download links. The .dmg and the system packages are
+      # for manual download, so they are not signed and not listed.
+      - name: Sign the updatable packages and write latest.json
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          for file in release/*.exe release/*.app.tar.gz release/*.AppImage; do
+            [ -e "$file" ] || continue
+            pnpm tauri signer sign "$file"
+          done
+          ls -l release/*.sig
+          node scripts/update-manifest.mjs "$GITHUB_REF_NAME"
+
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -210,10 +241,10 @@ jobs:
           # Safe to run again: a rerun after a failed upload finds the release already there.
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" --clobber \
-              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/SHA256SUMS
+              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/SHA256SUMS release/latest.json release/*.sig
           else
             gh release create "$GITHUB_REF_NAME" \
               --title "VN Mail ${GITHUB_REF_NAME#v}" \
               --generate-notes \
-              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/SHA256SUMS
+              release/*.deb release/*.rpm release/*.AppImage release/*.exe release/*.dmg release/*.app.tar.gz release/SHA256SUMS release/latest.json release/*.sig
           fi
