@@ -40,8 +40,12 @@ function signature(file) {
   return sig;
 }
 
+// GitHub renames spaces to dots when a file is uploaded as a release asset
+// (VN Mail_0.1.14_x64-setup.exe becomes VN.Mail_0.1.14_x64-setup.exe), so
+// the download link must use the asset name, not the local file name.
 function entry(file) {
-  return { signature: signature(file), url: `${base}/${encodeURIComponent(file)}` };
+  const asset = file.replaceAll(" ", ".");
+  return { signature: signature(file), url: `${base}/${encodeURIComponent(asset)}` };
 }
 
 const exe = find("-setup.exe");
