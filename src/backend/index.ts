@@ -85,6 +85,8 @@ export interface Backend {
   searchServer(query: string, accountId: number | null): Promise<number>;
   /** Fetches the body from the server the first time. */
   getMessage(id: number): Promise<MessageDetail>;
+  /** Translates a message body into `target` ("en" or "vi"). Google first, MyMemory as fallback. */
+  translateText(text: string, target: string): Promise<{ text: string; provider: string; source?: string | null }>;
   /** Other messages of the same conversation, oldest first. */
   threadMessages(id: number): Promise<MessageSummary[]>;
 
@@ -195,6 +197,7 @@ const tauriBackend: Backend = {
   search: (query, filters) => invoke("search_messages", { query, filters }),
   searchServer: (query, accountId) => invoke("search_server", { query, accountId }),
   getMessage: (id) => invoke("get_message", { id }),
+  translateText: (text, target) => invoke("translate_text", { text, target }),
   threadMessages: (id) => invoke("thread_messages", { id }),
 
   setFlags: (id, flags) => invoke("set_flags", { id, unread: flags.unread ?? null, flagged: flags.flagged ?? null, pinned: flags.pinned ?? null }),

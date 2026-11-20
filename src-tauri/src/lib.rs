@@ -15,6 +15,7 @@ pub mod smtp;
 pub mod stats;
 pub mod store;
 pub mod sync;
+pub mod translate;
 pub mod updates;
 
 use std::collections::HashMap;
@@ -30,6 +31,7 @@ use error::{Error, Result};
 use imap::Session;
 use model::*;
 use tauri_plugin_notification::NotificationExt;
+use translate::translate_text;
 
 const KEYRING_SERVICE: &str = "VN Mail";
 
@@ -2036,7 +2038,10 @@ pub fn run() {
             // A tap on a new-mail notification opens that mail: notifications
             // shown before a handler exists report nothing, so this runs first.
             let handle = app.handle().clone();
-            let _ = handle.notification().on_action(move |performed| {
+            // The handler is kept by the plugin, so the notification object
+            // itself may be built from a throwaway clone: the closure below
+            // moves the real handle, which the borrowed original could not.
+            let _ = handle.clone().notification().on_action(move |performed| {
                 if performed.action_id() != "tap" {
                     return;
                 }
@@ -2139,7 +2144,8 @@ pub fn run() {
             open_picked_file,
             open_attachment,
             save_message,
-            update_badge
+            update_badge,
+            translate_text,
         ])
         .build(tauri::generate_context!())
         .expect("error while starting VN Mail")

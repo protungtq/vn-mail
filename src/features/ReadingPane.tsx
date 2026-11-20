@@ -14,6 +14,7 @@ import {
   IconFileText,
   IconFlag,
   IconFolderShare,
+  IconLanguage,
   IconMail,
   IconMailOpened,
   IconPaperclip,
@@ -23,8 +24,9 @@ import {
   IconTag,
   IconTrash,
 } from "@tabler/icons-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { backend, errorText } from "../backend";
+import { useLang } from "../lib/useT";
 import { Avatar, Button, CategoryDot, IconButton, Marked, Menu, categories } from "../components/ui";
 import type { MenuItem } from "../components/ui";
 import { longTime, shortTime } from "../lib/dates";
@@ -291,6 +293,36 @@ export function ReadingPane() {
   const { setFlags, moveMessages, deleteMessages, selectMessage, reply, setDialog, showToast, targets } = useStore.getState();
   const now = useMemo(() => new Date(), [m]);
 
+  // In-mail translation: Google first, MyMemory as fallback (see translate.rs).
+  // The target is the interface language; the text is sent only when pressed.
+  const lang = useLang();
+  const [translation, setTranslation] = useState<{ text: string; provider: string } | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [translateFailed, setTranslateFailed] = useState(false);
+  useEffect(() => {
+    setTranslation(null);
+    setTranslating(false);
+    setTranslateFailed(false);
+  }, [m?.id]);
+  const translateBody = async () => {
+    if (!m || translating) return;
+    if (translation) {
+      setTranslation(null);
+      return;
+    }
+    if (!m.plain.trim()) return;
+    setTranslating(true);
+    setTranslateFailed(false);
+    try {
+      setTranslation(await backend.translateText(m.plain, lang));
+    } catch (e) {
+      setTranslateFailed(true);
+      showToast(errorText(e));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   if (draft) return <Composer key={`${draft.id ?? "new"}-${draft.inReplyTo}-${draft.subject}`} className={shell} />;
   if (ready && !hasAccounts) {
     return (
@@ -406,6 +438,14 @@ export function ReadingPane() {
           </IconButton>
         )}
         <div className="ml-auto flex items-center gap-0.5">
+          <IconButton
+            label={translating ? t("reading.translating") : t("reading.translate")}
+            active={translation !== null && translation.provider !== "same"}
+            disabled={translating}
+            onClick={() => void translateBody()}
+          >
+            <IconLanguage size={19} />
+          </IconButton>
           {!isDraft && (
             <IconButton
               label={t("actions.reply")}
@@ -486,12 +526,32 @@ export function ReadingPane() {
       {warnings.length > 0 && <Warning key={`warning-${m.id}`} id={m.id} reasons={warnings} />}
       {m.unsubscribe && !isDraft && <Unsubscribe key={`unsubscribe-${m.id}`} sender={m.fromName} kind={m.unsubscribe} to={m.unsubscribeTo ?? t("unsub.theSender")} />}
 
-      {m.html ? (
-        <HtmlBody key={`body-${m.id}`} sender={m.fromAddress} confirmed={senderConfirmed(m.auth, authServer)} html={cleaned?.html ?? m.html} note={trackerNote(cleaned?.pixels ?? 0, cleaned?.links ?? 0)} />
-      ) : (
-        <div className="selectable leading-relaxed whitespace-pre-wrap">
-          <PlainText text={m.plain} query={query} />
+      {translation && translation.provider !== "same" ? (
+        <div>
+          <div className="mb-2 flex flex-none items-center gap-2 text-xs text-ink3">
+            <span>{t("reading.translatedBy", { provider: translation.provider })}</span>
+            <button type="button" className="underline hover:text-ink" onClick={() => setTranslation(null)}>
+              {t("reading.showOriginal")}
+            </button>
+          </div>
+          <div className="selectable leading-relaxed whitespace-pre-wrap">{translation.text}</div>
         </div>
+      ) : (
+        <>
+          {translation?.provider === "same" && (
+            <p className="mb-2 text-xs text-ink3">{t("reading.alreadyLanguage")}</p>
+          )}
+          {translateFailed && (
+            <p className="mb-2 text-xs text-ink3">{t("reading.translateFailed")}</p>
+          )}
+          {m.html ? (
+            <HtmlBody key={`body-${m.id}`} sender={m.fromAddress} confirmed={senderConfirmed(m.auth, authServer)} html={cleaned?.html ?? m.html} note={trackerNote(cleaned?.pixels ?? 0, cleaned?.links ?? 0)} />
+          ) : (
+            <div className="selectable leading-relaxed whitespace-pre-wrap">
+              <PlainText text={m.plain} query={query} />
+            </div>
+          )}
+        </>
       )}
 
       {m.attachments.length > 0 && (

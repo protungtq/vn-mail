@@ -316,6 +316,7 @@ export const sampleBackend: Backend = {
     if (!m) throw new Error("This message no longer exists.");
     return named(m);
   },
+  translateText: async (text) => ({ text, provider: "sample" }),
   threadMessages: async (id) => {
     const m = find(id);
     if (!m) return [];
