@@ -228,7 +228,7 @@ export function App() {
     <div className="relative flex h-full flex-col">
       <main className="flex min-h-0 flex-1 bg-card">
         <FolderPane width={folderWidth} />
-        <Resizer value={folderWidth} min={220} max={360} onChange={setFolderWidth} label={t("a11y.resizeFolderPane")} />
+        <Resizer value={folderWidth} min={160} max={360} onChange={setFolderWidth} label={t("a11y.resizeFolderPane")} />
         <ErrorBoundary what={t("errorBoundary.messageList")} resetKey={folderId}>
           <MessageList width={listWidth} />
         </ErrorBoundary>

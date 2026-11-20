@@ -152,6 +152,10 @@ pub struct AppState {
     update: Mutex<Option<updates::Available>>,
     /// Google access tokens per account, with their expiry (Unix seconds).
     tokens: Mutex<HashMap<i64, (String, i64)>>,
+    /// Which message each shown new-mail notification opens: notification id → message id.
+    notification_mail: Mutex<HashMap<i32, i64>>,
+    /// Next notification id, so two notifications never share one.
+    notification_next_id: std::sync::atomic::AtomicI32,
 }
 
 // ---------- passwords ----------
@@ -243,6 +247,14 @@ async fn return_session(state: &AppState, account_id: i64, session: Session) {
 
 // ---------- background sync ----------
 
+/// What a tap on a new-mail notification opens: the message, in its folder.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OpenMessage {
+    message_id: i64,
+    folder_id: i64,
+}
+
 struct UiNotifier(AppHandle);
 
 impl sync::Notifier for UiNotifier {
@@ -252,16 +264,19 @@ impl sync::Notifier for UiNotifier {
     fn changed(&self, account_id: i64) {
         let _ = self.0.emit("mail-changed", account_id);
     }
-    fn new_mail(&self, _account_id: i64, mail: &[(String, String)]) {
+    fn new_mail(&self, _account_id: i64, mail: &[(i64, String, String)]) {
         let state = self.0.state::<AppState>();
         if db::get_setting(&db::lock(&state.db), "notifications").ok().flatten().as_deref() == Some("off") {
             return;
         }
         let (title, body) = match mail {
-            [(from, subject)] => (from.clone(), subject.clone()),
-            many => (format!("{} new messages", many.len()), many.iter().take(3).map(|m| m.0.as_str()).collect::<Vec<_>>().join(", ")),
+            [(_, from, subject)] => (from.clone(), subject.clone()),
+            many => (format!("{} new messages", many.len()), many.iter().take(3).map(|m| m.1.as_str()).collect::<Vec<_>>().join(", ")),
         };
-        let _ = self.0.notification().builder().title(title).body(body).show();
+        // The newest arrival is the one a tap on the notification opens.
+        let notification_id = state.notification_next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        state.notification_mail.lock().unwrap().insert(notification_id, mail[0].0);
+        let _ = self.0.notification().builder().id(notification_id).title(title).body(body).show();
     }
 }
 
@@ -2010,12 +2025,34 @@ pub fn run() {
                 taskbar_overlay: Default::default(),
                 update: Default::default(),
                 tokens: Default::default(),
+                notification_mail: Default::default(),
+                notification_next_id: std::sync::atomic::AtomicI32::new(1),
             });
             match add_tray_icon(app) {
                 Ok(()) => app.state::<AppState>().tray.store(true, std::sync::atomic::Ordering::Relaxed),
                 Err(e) => eprintln!("No tray icon: {e}"), // the app works without one; closing the window then quits
             }
             refresh_badge(app.handle());
+            // A tap on a new-mail notification opens that mail: notifications
+            // shown before a handler exists report nothing, so this runs first.
+            let handle = app.handle().clone();
+            let _ = handle.notification().on_action(move |performed| {
+                if performed.action_id() != "tap" {
+                    return;
+                }
+                let Some(notification_id) = performed.notification().map(|n| n.id()) else {
+                    return;
+                };
+                let state = handle.state::<AppState>();
+                let Some(message_id) = state.notification_mail.lock().unwrap().remove(&notification_id) else {
+                    return;
+                };
+                let Ok(detail) = db::message_detail(&db::lock(&state.db), message_id) else {
+                    return;
+                };
+                show_window(&handle);
+                let _ = handle.emit("open-message", OpenMessage { message_id, folder_id: detail.summary.folder_id });
+            });
             // Started at login: stay in the tray. Without a tray there would be no way back, so show the window.
             let hidden = std::env::args().any(|arg| arg == autostart::HIDDEN) && app.state::<AppState>().tray.load(std::sync::atomic::Ordering::Relaxed);
             if !hidden {

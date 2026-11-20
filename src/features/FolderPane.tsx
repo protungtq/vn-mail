@@ -311,6 +311,8 @@ function RefreshButton() {
 
 export function FolderPane({ width }: { width: number }) {
   const t = useT();
+  // Narrow enough that the name no longer fits beside the two buttons: icon only.
+  const compact = width < 190;
   const compose = useStore((s) => s.compose);
   const accounts = useStore((s) => s.accounts);
   const folders = useStore((s) => s.folders);
@@ -322,7 +324,7 @@ export function FolderPane({ width }: { width: number }) {
     <nav className="flex flex-none flex-col bg-canvas px-2.5 pt-3.5 pb-2" style={{ width }} aria-label={t("folders.label")}>
       <div className="mb-3 flex flex-none items-center gap-2 pr-0.5 pl-2">
         <img src={logo} alt="" className="size-[22px]" />
-        <span className="truncate text-[17px] text-ink">VN Mail</span>
+        {!compact && <span className="truncate text-[17px] text-ink">VN Mail</span>}
         <RefreshButton />
         <button type="button" aria-label={t("common.settings")} title={t("common.settings")} onClick={() => setDialog("settings")} className="rounded-lg p-1.5 text-ink3 hover:bg-hover hover:text-ink">
           <IconSettings size={18} stroke={1.6} />

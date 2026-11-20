@@ -159,6 +159,8 @@ export interface Backend {
   openLink(url: string): Promise<void>;
   /** Folders or messages of an account changed. */
   onChanged(listener: (accountId: number) => void): Unsubscribe;
+  /** A tap on a new-mail notification: open that message in its folder. */
+  onOpenMessage(listener: (message: { messageId: number; folderId: number }) => void): Unsubscribe;
   onProgress(listener: (progress: Progress) => void): Unsubscribe;
   onSendFailed(listener: (failure: SendFailed) => void): Unsubscribe;
   /** A message went out, but its copy could not be saved in the Sent folder. */
@@ -242,6 +244,7 @@ const tauriBackend: Backend = {
 
   openLink: (url) => invoke("open_link", { url }),
   onChanged: (listener) => subscribe("mail-changed", listener),
+  onOpenMessage: (listener) => subscribe("open-message", listener),
   onProgress: (listener) => subscribe("sync-progress", listener),
   onSendFailed: (listener) => subscribe("send-failed", listener),
   onSentCopyFailed: (listener) => subscribe("sent-copy-failed", listener),

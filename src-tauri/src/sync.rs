@@ -14,8 +14,8 @@ use crate::parse;
 /// How the sync engine reports to the outside (the UI in the app, nothing in tests).
 pub trait Notifier: Send + Sync {
     fn progress(&self, progress: Progress);
-    /// New unread mail arrived in the inbox after the first sync: (sender, subject) each.
-    fn new_mail(&self, _account_id: i64, _mail: &[(String, String)]) {}
+    /// New unread mail arrived in the inbox after the first sync: (message id, sender, subject) each.
+    fn new_mail(&self, _account_id: i64, _mail: &[(i64, String, String)]) {}
     /// Folders or messages of this account changed; lists should be re-read.
     fn changed(&self, account_id: i64);
 }
@@ -77,7 +77,7 @@ async fn sync_folder(db: &Db, session: &mut Session, account_id: i64, folder_id:
             db::get_setting(&conn, "focus_overrides")?.and_then(|json| serde_json::from_str(&json).ok()).unwrap_or_default();
         (if is_inbox { db::list_rules(&conn)? } else { Vec::new() }, overrides, focused_inbox)
     };
-    let mut arrived: Vec<(String, String)> = Vec::new();
+    let mut arrived: Vec<(i64, String, String)> = Vec::new();
     let mut to_rule: Vec<(i64, parse::Header)> = Vec::new();
 
     // A changed UIDVALIDITY means the server renumbered everything: start over.
@@ -163,7 +163,7 @@ async fn sync_folder(db: &Db, session: &mut Session, account_id: i64, folder_id:
                 } else if is_inbox && unread && !local.is_empty() {
                     // With the Focused inbox off, every new message is announced.
                     if header.focused || !focused_inbox {
-                        arrived.push((header.from_name.clone(), header.subject.clone()));
+                        arrived.push((id, header.from_name.clone(), header.subject.clone()));
                     }
                     to_rule.push((id, header));
                 }

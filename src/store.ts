@@ -360,6 +360,10 @@ export const useStore = create<State>((set, get) => {
       });
       backend.onProgress((p) => set((s) => ({ progress: { ...s.progress, [p.accountId]: p } })));
       backend.onUpdate((update) => set({ update }));
+      backend.onOpenMessage(({ messageId, folderId }) => {
+        get().selectFolder(folderId);
+        void get().selectMessage(messageId);
+      });
       void backend.updateStatus().then((update) => set({ update })).catch(() => {});
       backend.onSendFailed((f) => get().showToast(t("toast.sendFailed", { subject: f.subject || t("message.noSubject"), error: f.error })));
       backend.onSentCopyFailed((f) => get().showToast(t("toast.sentCopyFailed", { subject: f.subject || t("message.noSubject"), error: f.error })));

@@ -543,4 +543,5 @@ export const sampleBackend: Backend = {
   checkUpdate: async () => null,
   installUpdate: async () => {},
   onUpdate: () => () => {},
+  onOpenMessage: () => () => {},
 };
