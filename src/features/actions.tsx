@@ -77,7 +77,7 @@ export function messageMenu(m: MessageSummary): MenuItem[] {
     { label: t("actions.archive"), icon: <IconArchive size={16} />, onSelect: () => void s.moveMessages(ids, { role: "archive" }) },
     { label: t("actions.delete"), icon: <IconTrash size={16} />, onSelect: () => void s.deleteMessages(ids), danger: true },
     { label: t("actions.moveToInbox"), icon: <IconInbox size={16} />, onSelect: () => void s.moveMessages(ids, { role: "inbox" }) },
-    { label: t("actions.markJunk"), icon: <IconFolderShare size={16} />, onSelect: () => void s.moveMessages(ids, { role: "junk" }) },
+    { label: t("actions.reportSpam"), icon: <IconFolderShare size={16} />, onSelect: () => void s.moveMessages(ids, { role: "junk" }) },
     "divider",
     { label: m.unread ? t("actions.markRead") : t("actions.markUnread"), icon: <IconMailOpened size={16} />, onSelect: () => ids.forEach((id) => void s.setFlags(id, { unread: !m.unread })) },
     { label: m.flagged ? t("actions.removeFlag") : t("actions.flag"), icon: <IconFlag size={16} />, onSelect: () => ids.forEach((id) => void s.setFlags(id, { flagged: !m.flagged })) },

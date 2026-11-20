@@ -31,7 +31,7 @@ import { Avatar, Button, CategoryDot, IconButton, Marked, Menu, categories } fro
 import type { MenuItem } from "../components/ui";
 import { longTime, shortTime } from "../lib/dates";
 import { t as translate } from "../lib/i18n";
-import { authProblem, cleanMail, nameProblem, senderConfirmed } from "../lib/privacy";
+import { authMissing, authProblem, cleanMail, nameProblem, senderConfirmed } from "../lib/privacy";
 import { fileSize } from "../lib/search";
 import { useT } from "../lib/useT";
 import { useStore } from "../store";
@@ -308,6 +308,7 @@ export function ReadingPane() {
   const warn = useStore((s) => s.settings.phishing_warnings !== "off");
   const authServer = useStore((s) => s.accounts.find((a) => a.id === s.detail?.accountId)?.authServer);
   const isDraft = useStore((s) => s.folders.find((f) => f.id === s.detail?.folderId)?.role === "drafts");
+  const isSent = useStore((s) => s.folders.find((f) => f.id === s.detail?.folderId)?.role === "sent");
   const editDraft = useStore((s) => s.editDraft);
   const threadHidden = useStore((s) => s.settings.thread_collapsed === "yes");
   const setSetting = useStore((s) => s.setSetting);
@@ -416,6 +417,9 @@ export function ReadingPane() {
           [t("warning.nameMismatch"), nameProblem(m.fromName, m.fromAddress)],
           ...(cleaned?.mismatches ?? []).slice(0, 3).map((l): [string, string] => [t("warning.misleadingLink"), t("warning.misleadingText", { shown: l.shown, goes: l.goes })]),
           ...(cleaned?.lookAlikes ?? []).slice(0, 3).map((name): [string, string] => [t("warning.lookAlikeLink"), t("warning.lookAlikeText", { name })]),
+          // Last and mildest: the server said nothing about the sender, so
+          // nothing was checked. Sent mail has no such checks by nature.
+          [t("warning.notVerified"), isSent ? null : authMissing(m.auth, authServer)],
         ] as [string, string | null][]
       )
         .filter((w): w is [string, string] => !!w[1])

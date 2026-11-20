@@ -58,6 +58,17 @@ export function authProblem(auth: string | null | undefined, server: string | nu
   return null;
 }
 
+/**
+ * A sentence when the account's mail server said nothing usable about the
+ * sender, else null. While the trusted server is still being learned there
+ * is nothing to judge by, so that case stays silent too.
+ */
+export function authMissing(auth: string | null | undefined, server: string | null | undefined): string | null {
+  if (!server) return null;
+  if (checks(auth, server)) return null;
+  return t("privacy.authMissing");
+}
+
 /** Letters of other alphabets that look like Latin ones: Cyrillic "а", Greek "ο" and so on. */
 const FOREIGN_LETTER = /[\u0370-\u03ff\u0400-\u052f]/;
 

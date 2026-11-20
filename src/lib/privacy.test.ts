@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { brandFor } from "./brands";
-import { authProblem, cleanMail, lookAlike, nameProblem, readableHost, registrable, senderConfirmed } from "./privacy";
+import { authMissing, authProblem, cleanMail, lookAlike, nameProblem, readableHost, registrable, senderConfirmed } from "./privacy";
 
 describe("registrable", () => {
   it("finds the registered part of a host", () => {
@@ -43,6 +43,18 @@ describe("authProblem", () => {
   it("ignores results that our own mail server did not write", () => {
     expect(authProblem(by("dmarc=fail", "other.example"), MX)).toBeNull();
     expect(authProblem(by("dmarc=fail"), null)).toBeNull();
+  });
+});
+
+describe("authMissing", () => {
+  it("is silent when the checks exist, or the server is still being learned", () => {
+    expect(authMissing(by("spf=pass;dkim=pass;dmarc=pass"), MX)).toBeNull();
+    expect(authMissing(by("dmarc=pass"), null)).toBeNull();
+  });
+  it("warns when the server said nothing usable about the sender", () => {
+    expect(authMissing("", MX)).toContain("no information");
+    expect(authMissing(null, MX)).toContain("no information");
+    expect(authMissing(by("dmarc=pass", "other.example"), MX)).toContain("no information");
   });
 });
 
