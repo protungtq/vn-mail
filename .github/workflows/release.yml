@@ -239,6 +239,12 @@ jobs:
           ls -l release/*.sig
           node scripts/update-manifest.mjs "$GITHUB_REF_NAME"
 
+      - name: Install the public-key verifier
+        run: sudo apt-get update && sudo apt-get install -y minisign
+
+      - name: Verify signatures from the updater manifest
+        run: node scripts/verify-update-signatures.mjs
+
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

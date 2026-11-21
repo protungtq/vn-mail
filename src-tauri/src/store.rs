@@ -197,6 +197,51 @@ mod tests {
     }
 
     #[test]
+    fn upgrading_an_encrypted_profile_preserves_accounts_mail_and_drafts() {
+        let path = temp_db("upgrade");
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(&format!("PRAGMA key = {};", key_literal(KEY).unwrap())).unwrap();
+            // Schema 4 is the first schema with local drafts.
+            for sql in &MIGRATIONS[..4] {
+                conn.execute_batch(sql).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 4).unwrap();
+            conn.execute_batch(
+                "INSERT INTO accounts (id, address, kind) VALUES (4, 'mail@example.test', 'imap');
+                 INSERT INTO messages (id, account_id, subject, date) VALUES (7, 4, 'Old invoice', 1);
+                 INSERT INTO search_index (rowid, subject, sender, recipients, body)
+                    VALUES (7, 'Old invoice', 'sender@example.test', '', 'Existing body');
+                 INSERT INTO drafts (id, account_id, content, updated_at)
+                    VALUES (9, 4, 'unsent text', 2);",
+            )
+            .unwrap();
+        }
+        assert!(!is_plain(&path));
+        for _ in 0..2 {
+            let conn = open(&path, KEY).unwrap();
+            assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
+            let preserved: (String, String, String, String) = conn
+                .query_row(
+                    "SELECT a.address, m.subject, s.body, d.content
+                     FROM accounts a JOIN messages m ON m.account_id = a.id
+                     JOIN search_index s ON s.rowid = m.id
+                     JOIN drafts d ON d.account_id = a.id
+                     WHERE a.id = 4 AND m.id = 7 AND d.id = 9 AND search_index MATCH 'existing'",
+                    [],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+                )
+                .unwrap();
+            assert_eq!(
+                preserved,
+                ("mail@example.test".into(), "Old invoice".into(), "Existing body".into(), "unsent text".into())
+            );
+        }
+        assert!(!is_plain(&path));
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn deleting_an_account_removes_its_mail() {
         let conn = memory();
         conn.execute_batch(
