@@ -2,7 +2,7 @@
 
 VN Mail keeps your mail on your computer. There is no VN Mail account and no VN Mail server that sees your mail.
 
-VN Mail is a fork of [OpenWren](https://github.com/VinceGHER/openwren). Unlike OpenWren, this fork sends no anonymous usage count and checks for no new version: both are disabled in the code, so the requests below are the only ones the app makes.
+VN Mail is a fork of [OpenWren](https://github.com/VinceGHER/openwren). VN Mail sends no usage statistics and checks GitHub Releases for updates.
 
 ## Every network request the app makes
 
@@ -12,13 +12,11 @@ VN Mail is a fork of [OpenWren](https://github.com/VinceGHER/openwren). Unlike O
 | Google sign-in | Only if you choose "Sign in with Google", and once more when you remove that account, to cancel its access | Google |
 | Remote images in a message | Only when you click "Show images", or for senders you chose to always allow | The server named in the message |
 | Unsubscribe | Only when you confirm "Unsubscribe" on a mailing | The sender's unsubscribe address |
+| Checking and downloading updates | When the app periodically checks for a newer version, when you manually check, or when you install an update | GitHub Releases |
+| Translating a message | Only after you confirm in the reading pane. The plain-text body is sent, which can include quoted replies or signatures | Google Translate |
 | Opening a link | When you click one | Your browser opens it |
 
-Nothing else. No analytics library, no crash reporter, no update check, no usage count.
-
-## Never collected
-
-Email addresses, names, subjects, mail text, attachments, contacts, folder names, mail server names, IP addresses.
+The app contains no usage analytics or crash reporter. External services receive the requests described above and can see the source IP address.
 
 ## Where your data lives
 
@@ -26,4 +24,4 @@ Email addresses, names, subjects, mail text, attachments, contacts, folder names
 - Passwords, Google tokens and the database key: the system keyring.
 - Attachments you open: a temporary folder, emptied after 30 minutes and when VN Mail quits.
 
-Removing an account in Settings deletes its local mail and its saved password. Nothing changes on the server.
+Removing an account in Settings deletes its local mail and saved credentials. If you connected via Google OAuth, VN Mail also attempts to revoke its access.

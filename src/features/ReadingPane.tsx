@@ -325,7 +325,11 @@ export function ReadingPane() {
   const [translation, setTranslation] = useState<{ text: string; provider: string } | null>(null);
   const [translating, setTranslating] = useState(false);
   const [translateFailed, setTranslateFailed] = useState(false);
+  const [translationPrompt, setTranslationPrompt] = useState<{ id: number; target: string } | null>(null);
+  const translationRequest = useRef(0);
   useEffect(() => {
+    translationRequest.current += 1;
+    setTranslationPrompt(null);
     setTranslation(null);
     setTranslating(false);
     setTranslateFailed(false);
@@ -333,28 +337,34 @@ export function ReadingPane() {
   const runTranslation = async (to: string) => {
     if (!m || translating) return;
     if (!m.plain.trim()) return;
+    const request = ++translationRequest.current;
+    setTranslationPrompt(null);
     setTranslating(true);
     setTranslateFailed(false);
     try {
-      setTranslation(await backend.translateText(m.plain, to));
+      const result = await backend.translateText(m.plain, to);
+      if (request === translationRequest.current && useStore.getState().detail?.id === m.id) setTranslation(result);
     } catch (e) {
+      if (request !== translationRequest.current || useStore.getState().detail?.id !== m.id) return;
       setTranslateFailed(true);
       showToast(errorText(e));
     } finally {
-      setTranslating(false);
+      if (request === translationRequest.current) setTranslating(false);
     }
   };
-  const translateBody = async () => {
+  const translateBody = () => {
     if (translation) {
+      setTranslationPrompt(null);
       setTranslation(null);
       return;
     }
-    await runTranslation(target);
+    if (m?.plain.trim()) setTranslationPrompt({ id: m.id, target });
   };
   const pickTarget = (to: string) => {
     setTargetLang(to);
-    // A translation already on screen follows the new target at once.
-    if (translation) void runTranslation(to);
+    if (m && (translation || translationPrompt?.id === m.id)) {
+      setTranslationPrompt({ id: m.id, target: to });
+    }
   };
 
   if (draft) return <Composer key={`${draft.id ?? "new"}-${draft.inReplyTo}-${draft.subject}`} className={shell} />;
@@ -493,7 +503,7 @@ export function ReadingPane() {
             label={translating ? t("reading.translating") : t("reading.translate")}
             active={translation !== null && translation.provider !== "same"}
             disabled={translating}
-            onClick={() => void translateBody()}
+            onClick={translateBody}
           >
             <IconLanguage size={19} />
           </IconButton>
@@ -576,6 +586,16 @@ export function ReadingPane() {
 
       {warnings.length > 0 && <Warning key={`warning-${m.id}`} id={m.id} reasons={warnings} />}
       {m.unsubscribe && !isDraft && <Unsubscribe key={`unsubscribe-${m.id}`} sender={m.fromName} kind={m.unsubscribe} to={m.unsubscribeTo ?? t("unsub.theSender")} />}
+
+      {translationPrompt?.id === m.id && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[10px] bg-canvas px-3 py-2 text-[13px] text-ink2">
+          <span className="grow">{t("reading.translateDisclosure")}</span>
+          <Button variant="primary" onClick={() => void runTranslation(translationPrompt.target)}>
+            {t("reading.translate")}
+          </Button>
+          <Button onClick={() => setTranslationPrompt(null)}>{t("common.cancel")}</Button>
+        </div>
+      )}
 
       {translation && translation.provider !== "same" ? (
         <div>
