@@ -1,11 +1,14 @@
-//! Translating a message body, on demand, with free services and no key.
-//!
-//! Google Translate's unofficial endpoint is tried first: it needs no key,
-//! costs nothing and translates English–Vietnamese well. When it fails,
-//! MyMemory is tried: also free and keyless, with a small daily allowance
-//! per IP address (5,000 characters a day). Nothing is translated unless
-//! the user presses the button: the text of the message leaves the computer
-//! only then, and only the plain-text body is sent, never attachments.
+//! Translating a message body, on demand, with Google Translate's
+//! unofficial endpoint: it needs no key, costs nothing and translates
+//! English–Vietnamese well. Google is the only provider on purpose: there
+//! is no fallback to MyMemory, because MyMemory's anonymous API stores
+//! every submitted segment in its public translation memory (its own terms
+//! call segments not explicitly marked private "Public Data", stored long
+//! term, searchable and served to other users). Mail text must never land
+//! in a public archive, so when Google fails the call fails instead.
+//! Nothing is translated unless the user presses the button: the text of
+//! the message leaves the computer only then, and only the plain-text body
+//! is sent, never attachments.
 
 use serde::Serialize;
 
@@ -118,52 +121,12 @@ async fn via_google(
     Ok((out, source))
 }
 
-/// Read MyMemory's answer. A warning text instead of a translation (daily
-/// allowance used up, request too long) counts as a failure.
-fn parse_mymemory(body: &str) -> Option<String> {
-    let v: serde_json::Value = serde_json::from_str(body).ok()?;
-    if v.get("responseStatus")?.as_i64()? != 200 {
-        return None;
-    }
-    let text = v
-        .get("responseData")?
-        .get("translatedText")?
-        .as_str()?;
-    if text.contains("MYMEMORY WARNING") || text.contains("QUERY LENGTH LIMIT") {
-        return None;
-    }
-    Some(text.to_string())
-}
-
-/// Translate with MyMemory, chunk by chunk (its GET requests take ~400 characters).
-async fn via_mymemory(client: &reqwest::Client, text: &str, target: &str) -> Result<String> {
-    let langpair = encode(&format!("auto|{target}"));
-    let mut out = String::new();
-    for chunk in chunks(text, 400) {
-        let url = format!(
-            "https://api.mymemory.translated.net/get?q={}&langpair={langpair}",
-            encode(&chunk),
-        );
-        let body = client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| Error(format!("MyMemory did not answer: {e}")))?
-            .error_for_status()
-            .map_err(|e| Error(format!("MyMemory refused the request: {e}")))?
-            .text()
-            .await
-            .map_err(|e| Error(format!("MyMemory's answer could not be read: {e}")))?;
-        let t = parse_mymemory(&body)
-            .ok_or_else(|| Error("MyMemory's answer could not be read.".to_string()))?;
-        out.push_str(&t);
-    }
-    Ok(out)
-}
-
-/// Translate `text` into `target` ("en" or "vi"). Google first, MyMemory
-/// when Google fails. When the text is already in the target language the
-/// original comes back with provider "same", so the reader can say so.
+/// Translate `text` into `target` ("en" or "vi") with Google, the only
+/// provider. When the text is already in the target language the original
+/// comes back with provider "same", so the reader can say so. When Google
+/// fails the call fails: there is deliberately no MyMemory fallback, because
+/// MyMemory's anonymous API stores submitted text in its public
+/// translation memory.
 #[tauri::command]
 pub async fn translate_text(text: String, target: String) -> Result<Translation> {
     if text.trim().is_empty() {
@@ -178,30 +141,19 @@ pub async fn translate_text(text: String, target: String) -> Result<Translation>
         .timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| Error(format!("Could not start the translation: {e}")))?;
-    match via_google(&client, &text, &target).await {
-        Ok((translated, source)) => {
-            if source.as_deref() == Some(target.as_str()) {
-                Ok(Translation {
-                    text,
-                    provider: "same".to_string(),
-                    source,
-                })
-            } else {
-                Ok(Translation {
-                    text: translated,
-                    provider: "Google".to_string(),
-                    source,
-                })
-            }
-        }
-        Err(_) => {
-            let translated = via_mymemory(&client, &text, &target).await?;
-            Ok(Translation {
-                text: translated,
-                provider: "MyMemory".to_string(),
-                source: None,
-            })
-        }
+    let (translated, source) = via_google(&client, &text, &target).await?;
+    if source.as_deref() == Some(target.as_str()) {
+        Ok(Translation {
+            text,
+            provider: "same".to_string(),
+            source,
+        })
+    } else {
+        Ok(Translation {
+            text: translated,
+            provider: "Google".to_string(),
+            source,
+        })
     }
 }
 
@@ -222,18 +174,6 @@ mod tests {
     fn google_empty_answer_rejected() {
         assert!(parse_google(r###"[[],null,"en"]###).is_none());
         assert!(parse_google("not json").is_none());
-    }
-
-    #[test]
-    fn mymemory_answer_parses() {
-        let body = r###"{"responseData":{"translatedText":"Xin chào"},"responseStatus":200}"###;
-        assert_eq!(parse_mymemory(body).as_deref(), Some("Xin chào"));
-    }
-
-    #[test]
-    fn mymemory_quota_warning_rejected() {
-        let body = r###"{"responseData":{"translatedText":"MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY"},"responseStatus":429}"###;
-        assert!(parse_mymemory(body).is_none());
     }
 
     #[test]

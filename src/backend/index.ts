@@ -79,7 +79,7 @@ export interface Backend {
   searchServer(query: string, accountId: number | null): Promise<number>;
   /** Fetches the body from the server the first time. */
   getMessage(id: number): Promise<MessageDetail>;
-  /** Translates a message body into `target` ("en" or "vi"). Google first, MyMemory as fallback. */
+  /** Translates a message body into `target` ("en" or "vi") with Google, the only provider. */
   translateText(text: string, target: string): Promise<{ text: string; provider: string; source?: string | null }>;
   /** Other messages of the same conversation, oldest first. */
   threadMessages(id: number): Promise<MessageSummary[]>;

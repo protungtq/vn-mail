@@ -61,8 +61,8 @@ function trackerNote(pixels: number, links: number): string | undefined {
 }
 
 /** Languages a message can be translated into. Names are shown in their own
- * language, so no translation keys are needed for them. Both translation
- * services (Google, MyMemory) accept these codes. */
+ * language, so no translation keys are needed for them. Google Translate
+ * accepts these codes. */
 const TARGET_LANGS: { code: string; name: string }[] = [
   { code: "vi", name: "Tiếng Việt" },
   { code: "en", name: "English" },
@@ -316,7 +316,7 @@ export function ReadingPane() {
   const { setFlags, moveMessages, deleteMessages, selectMessage, reply, setDialog, showToast, targets } = useStore.getState();
   const now = useMemo(() => new Date(), [m]);
 
-  // In-mail translation: Google first, MyMemory as fallback (see translate.rs).
+  // In-mail translation: Google only, no fallback (see translate.rs).
   // The target defaults to the interface language; the reader can pick
   // another one in the toolbar. The text is sent only when translating.
   const lang = useLang();
