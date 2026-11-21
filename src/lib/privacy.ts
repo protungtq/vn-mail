@@ -240,7 +240,10 @@ function tiny(img: Element): boolean {
  * `blockTrackers` false leaves the HTML as it is and only inspects the links.
  */
 export function cleanMail(html: string, blockTrackers = true): Cleaned {
-  const doc = new DOMParser().parseFromString(html, "text/html");
+  // Inspect mail in an inert fragment before the reader applies its frame policy.
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const doc = template.content;
   let pixels = 0;
   let links = 0;
   const mismatches: Cleaned["mismatches"] = [];
@@ -287,5 +290,5 @@ export function cleanMail(html: string, blockTrackers = true): Cleaned {
       mark(link);
     }
   }
-  return { html: doc.body.innerHTML, pixels, links, mismatches, lookAlikes };
+  return { html: template.innerHTML, pixels, links, mismatches, lookAlikes };
 }

@@ -101,16 +101,18 @@ async fn via_google(
             "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={target}&dt=t&q={}",
             encode(&chunk),
         );
-        let body = client
+        let response = client
             .get(url)
             .send()
             .await
-            .map_err(|e| Error(format!("Google Translate did not answer: {e}")))?
-            .error_for_status()
-            .map_err(|e| Error(format!("Google Translate refused the request: {e}")))?
+            .map_err(|_| Error("Google Translate did not answer.".into()))?;
+        if !response.status().is_success() {
+            return Err(Error(format!("Google Translate returned HTTP {}.", response.status())));
+        }
+        let body = response
             .text()
             .await
-            .map_err(|e| Error(format!("Google Translate's answer could not be read: {e}")))?;
+            .map_err(|_| Error("Google Translate's answer could not be read.".into()))?;
         let (t, s) = parse_google(&body)
             .ok_or_else(|| Error("Google Translate's answer could not be read.".to_string()))?;
         if source.is_none() {
@@ -138,6 +140,7 @@ pub async fn translate_text(text: String, target: String) -> Result<Translation>
     }
     let client = reqwest::Client::builder()
         .user_agent("VN Mail")
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| Error(format!("Could not start the translation: {e}")))?;

@@ -21,6 +21,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   # Builds the packages. This job runs all third-party build code (npm packages,
   # Rust crates, build scripts), so it gets no secrets and a read-only token.
   build-linux:
@@ -184,7 +189,7 @@ jobs:
   # This is the only job that touches the update key: the build jobs run
   # third-party build code and get no secrets.
   publish:
-    needs: [build-linux, build-windows, build-macos]
+    needs: [verify, build-linux, build-windows, build-macos]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -233,6 +238,12 @@ jobs:
           done
           ls -l release/*.sig
           node scripts/update-manifest.mjs "$GITHUB_REF_NAME"
+
+      - name: Install the public-key verifier
+        run: sudo apt-get update && sudo apt-get install -y minisign
+
+      - name: Verify signatures from the updater manifest
+        run: node scripts/verify-update-signatures.mjs
 
       - name: Create the GitHub Release
         env:
