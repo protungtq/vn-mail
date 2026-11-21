@@ -12,9 +12,16 @@ export const hasPicture = (s: SavedSignature) => s.image !== "" && s.layout !== 
  */
 export function signatureHtml(s: SavedSignature, src: string = s.image): string {
   if (!hasPicture(s)) return s.html;
-  const picture = (width: number) => `<img src="${src}" width="${width}" alt="" style="display:block;border:0">`;
-  if (s.layout === "above") return `<div style="margin-bottom:8px">${picture(160)}</div>${s.html}`;
-  return `<table cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:14px;vertical-align:top">${picture(96)}</td><td style="vertical-align:top">${s.html}</td></tr></table>`;
+  // The stored picture is at most 320px on its longest side. Show it at its
+  // natural size, capped by max-width/max-height, so a wide banner (logo and
+  // company name baked into one picture) stays readable instead of being
+  // squeezed to a fixed 96/160px wide. The width attribute stays as a
+  // fallback for old mail programs that ignore max-width/max-height: there
+  // the picture keeps today's size instead of disappearing or blowing up.
+  const picture = (width: number, maxWidth: number, maxHeight: number) =>
+    `<img src="${src}" width="${width}" alt="" style="display:block;border:0;width:auto;max-width:${maxWidth}px;max-height:${maxHeight}px;height:auto">`;
+  if (s.layout === "above") return `<div style="margin-bottom:8px">${picture(160, 320, 160)}</div>${s.html}`;
+  return `<table cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:14px;vertical-align:top">${picture(96, 200, 96)}</td><td style="vertical-align:top">${s.html}</td></tr></table>`;
 }
 
 /** Shrink a chosen picture so it adds little to every message. Returns a data URL. */
