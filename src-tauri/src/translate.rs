@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn google_answer_parses() {
-        let body = r###"[[["Xin chào, cảm ơn email của bạn. ","Hello, thank you for your email. ",null,null,3],[ "Chúng tôi sẽ ra mắt trò chơi vào tuần tới.","We will launch the game next week.",null,null,3]],null,"en"]###;
+        let body = r###"[[["Xin chào, cảm ơn email của bạn. ","Hello, thank you for your email. ",null,null,3],[ "Chúng tôi sẽ ra mắt trò chơi vào tuần tới.","We will launch the game next week.",null,null,3]],null,"en"]"###;
         let (text, source) = parse_google(body).expect("parses");
         assert!(text.contains("Xin chào"));
         assert!(text.contains("tuần tới"));
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn google_empty_answer_rejected() {
-        assert!(parse_google(r###"[[],null,"en"]###).is_none());
+        assert!(parse_google(r###"[[],null,"en"]"###).is_none());
         assert!(parse_google("not json").is_none());
     }
 
