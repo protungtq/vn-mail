@@ -166,6 +166,10 @@ export interface SavedSignature {
   layout: "text" | "left" | "above";
   /** The picture as a data URL, or empty. */
   image: string;
+  /** Stored picture size in px, when known (saved when the picture was picked). */
+  imageWidth?: number;
+  /** Stored picture size in px, when known (saved when the picture was picked). */
+  imageHeight?: number;
 }
 
 export interface SignatureDefaults {

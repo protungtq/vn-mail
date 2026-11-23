@@ -341,13 +341,13 @@ function Signatures() {
                       e.target.value = "";
                       if (!file) return;
                       pictureFromFile(file)
-                        .then((image) => change({ image }))
+                        .then(({ src, width, height }) => change({ image: src, imageWidth: width, imageHeight: height }))
                         .catch(() => setError(t("signatures.imageError")));
                     }}
                   />
                 </label>
                 {editing.image && (
-                  <Button variant="ghost" className="h-7 text-ink2" onClick={() => change({ image: "" })}>
+                  <Button variant="ghost" className="h-7 text-ink2" onClick={() => change({ image: "", imageWidth: undefined, imageHeight: undefined })}>
                     {t("signatures.removeImage")}
                   </Button>
                 )}
