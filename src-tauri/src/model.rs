@@ -142,6 +142,11 @@ pub struct Signature {
     /// The signature's picture as a data URL, or empty.
     #[serde(default)]
     pub image: String,
+    /// Stored picture size in px, when known (saved when the picture was picked).
+    #[serde(default)]
+    pub image_width: Option<i64>,
+    #[serde(default)]
+    pub image_height: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
