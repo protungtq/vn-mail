@@ -4,6 +4,8 @@
 
 # VN Mail
 
+🇻🇳 [Tiếng Việt](README-vi.md)
+
 > A fork of [OpenWren](https://github.com/VinceGHER/openwren) (Apache-2.0),
 > renamed with its own icon and app identifier. The update check and the
 > anonymous usage count are disabled: VN Mail has no server for them.
@@ -17,18 +19,8 @@ about half a second.
 Gmail and any IMAP account, one inbox for all of them, search that reaches back
 years, and protection against trackers and phishing built in.
 
-**If you like it, please star it.** It is the simplest way to help the project
-get found.
 VN Mail is maintained by TungTQ. Bug reports, fixes and ideas are welcome
 in the [issues](https://github.com/protungtq/vn-mail/issues).
-
-<a href="https://www.star-history.com/?repos=protungtq%2Fvn-mail&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=protungtq/vn-mail&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=protungtq/vn-mail&type=date&legend=top-left" />
-   <img alt="Star history chart" src="https://api.star-history.com/chart?repos=protungtq/vn-mail&type=date&legend=top-left" />
- </picture>
-</a>
 
 | Light | Dark |
 | --- | --- |
