@@ -11,7 +11,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
-const url = process.env.OPENWREN_URL ?? "http://localhost:1420";
+const url = process.env.VNMAIL_URL ?? "http://localhost:1420";
 const out = new URL("../docs/", import.meta.url).pathname;
 const site = new URL("../website/public/screens/", import.meta.url).pathname;
 

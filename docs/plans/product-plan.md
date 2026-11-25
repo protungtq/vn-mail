@@ -1,7 +1,9 @@
-# OpenWren — project plan
+# VN Mail — project plan
 
-An open-source desktop mail client for Linux. It borrows the familiar three-pane layout of the new Outlook but has its own modern look; it is not a visual copy.
+An open-source desktop mail client for Windows, macOS and Linux. It borrows the familiar three-pane layout of the new Outlook but has its own modern look; it is not a visual copy.
 Mail only: no calendar, contacts or to-do modules.
+
+This plan began as OpenWren's and was adapted for VN Mail, a fork of OpenWren.
 
 Design reference: [design/mockup.html](design/mockup.html) (open it in a browser).
 
@@ -10,19 +12,19 @@ Design reference: [design/mockup.html](design/mockup.html) (open it in a browser
 | Topic | Decision |
 |---|---|
 | Scope | Mail only. No app rail. |
-| Accounts | Gmail (Google sign-in), generic IMAP, POP3 |
+| Accounts | Gmail (Google sign-in), generic IMAP |
 | Gmail login | OAuth 2 browser sign-in only (no app passwords) |
-| Platform | Linux only for v1 (AppImage and .deb) |
+| Platform | Windows, macOS, Linux |
 | App shell | Tauri 2: Rust backend, web interface |
 | Interface | React + TypeScript + Vite, own design system (Tailwind CSS + Radix UI primitives) |
-| Look | OpenWren's own style: soft light-blue header and accents, pill controls, rounded cards. No Outlook ribbon. |
+| Look | VN Mail's own style: soft light-blue header and accents, pill controls, rounded cards. No Outlook ribbon. Five colour themes; the default is soft blue. |
 | Licence | Apache-2.0 (first planned as GPL-3.0) |
 | Must-haves | Search across the whole mailbox including mail 1–2+ years old; signatures |
 
 ## 2. Architecture
 
 ```
-┌───────────────────────────── Tauri window (WebKitGTK) ─────────────────────────────┐
+┌───────────────────────────── Tauri window (system web view) ───────────────────────┐
 │  React UI (TypeScript)                                                             │
 │  folder pane · message list · reading pane · composer · search · settings          │
 └───────────────▲──────────────────────────────────────────────┬─────────────────────┘
@@ -30,7 +32,7 @@ Design reference: [design/mockup.html](design/mockup.html) (open it in a browser
 ┌───────────────┴──────────────────────────────────────────────▼─────────────────────┐
 │  Rust core                                                                         │
 │  commands  →  services (accounts, sync, send, search, signatures, rules)           │
-│  protocol adapters: IMAP · POP3 · SMTP · Google OAuth                              │
+│  protocol adapters: IMAP · SMTP · Google OAuth                                     │
 │  storage: SQLite (+ FTS5 index) · attachment cache on disk · system keyring        │
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -49,7 +51,6 @@ Backend (Rust). Versions and APIs are to be confirmed against current documentat
 |---|---|
 | Async runtime | `tokio` |
 | IMAP | `async-imap` |
-| POP3 | `async-pop3` |
 | SMTP | `lettre` |
 | Parse / build messages | `mail-parser`, `mail-builder` |
 | Database | `rusqlite` (bundled SQLite with FTS5) |
@@ -76,9 +77,9 @@ Frontend (TypeScript):
 ### 2.2 Repository layout
 
 ```
-openwren/
-├── PLAN.md
+vnmail/
 ├── LICENSE                     Apache-2.0
+├── docs/plans/product-plan.md  this plan
 ├── design/mockup.html          static design reference
 ├── src/                        React interface
 │   ├── app/                    shell, routing, theme
@@ -91,7 +92,7 @@ openwren/
 │   ├── src/
 │   │   ├── commands/           functions callable from the UI
 │   │   ├── services/           accounts, sync, send, search, rules
-│   │   ├── protocols/          imap.rs, pop3.rs, smtp.rs, oauth_google.rs
+│   │   ├── protocols/          imap.rs, smtp.rs, oauth_google.rs
 │   │   ├── store/              schema, migrations, queries
 │   │   └── main.rs
 │   └── tauri.conf.json
@@ -102,7 +103,7 @@ openwren/
 
 | Table | Holds |
 |---|---|
-| `accounts` | address, display name, type (gmail / imap / pop3), server settings, sync settings. No secrets. |
+| `accounts` | address, display name, type (gmail / imap), server settings, sync settings. No secrets. |
 | `folders` | per account: path, role (inbox, sent, drafts, trash, junk, archive), UIDVALIDITY, sync cursors, unread count, favourite flag |
 | `messages` | headers: from, to, cc, subject, date, Message-ID, References, flags, size, preview text, thread id, has-attachment, pinned, snoozed-until, category ids, focused/other |
 | `message_folders` | which folder(s) a message is in, with its server UID (a Gmail message can carry several labels) |
@@ -140,46 +141,38 @@ Passwords and OAuth tokens are stored only in the system keyring, keyed by accou
 - Gmail specifics: labels appear as folders; de-duplicate using `X-GM-MSGID`; conversations from `X-GM-THRID`; server search through `X-GM-RAW`.
 - The Google OAuth client ID is entered in settings (see section 9, risk 1).
 
-### 4.3 POP3
-
-- Download new messages using UIDL to track what has been seen.
-- Option: leave messages on the server, or delete after N days.
-- Folders, flags, categories and search are local only.
-- Sending uses a separately configured SMTP server.
-
-### 4.4 Sending
+### 4.3 Sending
 
 - Build the message (HTML plus plain-text alternative, inline images, attachments), place it in `outbox`, send by SMTP, then save a copy to the Sent folder (skipped for Gmail, which does this itself).
 - Undo send: a configurable delay (default 10 seconds) before the message leaves the outbox.
 - Send later: the message stays in the outbox until its time. The app must be running at that time; this is stated in the UI.
 
-### 4.5 Search
+### 4.4 Search
 
 - Local search uses FTS5 over all indexed headers and all downloaded bodies. Typical response under 100 ms.
 - Query language: free text plus `from:`, `to:`, `subject:`, `has:attachment`, `before:`, `after:`, `in:`.
 - Filter chips: account, folder, sender, has attachment, and date presets (any time, past year, older than 1 year, older than 2 years, custom range).
 - Results grouped by year, matches highlighted.
 - "Search the server for more": runs IMAP `SEARCH` (or `X-GM-RAW` on Gmail) for messages whose bodies are not downloaded, and merges the results.
-- POP3 accounts: local results only.
 
-### 4.6 Conversations, Focused / Other, rules
+### 4.5 Conversations, Focused / Other, rules
 
 - Threading from `References` / `In-Reply-To`, with subject fallback; Gmail thread ids where available.
 - Focused / Other is rule-based: mail with `List-Unsubscribe` or bulk headers, and senders you have never written to, go to Other. "Always move to Focused / Other" on a sender is remembered.
 - Rules run locally on new mail: conditions (from, to, subject contains, has attachment) → actions (move, categorise, flag, mark read, delete).
 
-### 4.7 Security
+### 4.6 Security
 
 - Mail HTML is sanitised in Rust (`ammonia`) and again in the UI, then shown in a sandboxed iframe with scripts disabled.
 - Remote images are blocked by default, with "Show images" per message and "Always for this sender".
 - Links open in the system browser, with the real address shown on hover.
-- TLS required by default for IMAP, POP3 and SMTP; plain connections need an explicit opt-in.
+- TLS required by default for IMAP and SMTP; plain connections need an explicit opt-in.
 - Tauri's command allow-list restricts what the web side can call.
 
 ## 5. Features
 
 ### Accounts
-- Add account wizard: enter address → choose Google, IMAP or POP3 → auto-detected server settings (editable) → test connection → first sync
+- Add account wizard: enter address → choose Google or IMAP → auto-detected server settings (editable) → test connection → first sync
 - Several accounts, each with its own folder tree; Favorites section across accounts
 - Edit, re-authenticate and remove accounts
 
@@ -188,7 +181,7 @@ Passwords and OAuth tokens are stored only in the system keyring, keyed by accou
 - Conversation view with expandable messages
 - Focused / Other tabs; groups for Pinned, Today, Yesterday, This week, older
 - Unread styling, attachment chips, inline images, open and save attachments
-- Light and dark themes, including a dark rendering for mail bodies
+- Five colour themes, including a dark rendering for mail bodies
 - Density: roomy, cozy, compact
 
 ### Triage
@@ -213,22 +206,22 @@ Passwords and OAuth tokens are stored only in the system keyring, keyed by accou
 
 ### Folders and search
 - Create, rename, move, delete and favourite folders; empty Deleted and Junk
-- Search as described in 4.5
+- Search as described in 4.4
 - Sort and filter the message list (unread, flagged, has attachment, to me)
 
 ### System
 - Offline mode with outbox and queued actions
-- Desktop notifications, tray icon with unread count, start minimised
+- Desktop notifications, tray icon, unread badge on the taskbar, start minimised
 - Keyboard shortcuts that follow Outlook's, so habits carry over
 - Import and export `.eml` and `.mbox`
 - Settings pages: Accounts, Signatures, Sync and storage, Layout, Appearance, Rules, Notifications, Shortcuts
 
 ### Out of scope for v1
-Calendar, contacts and to-do modules; Exchange / Microsoft 365 native protocols; PGP and S/MIME; Windows and macOS builds; mobile; AI drafting.
+Calendar, contacts and to-do modules; Exchange / Microsoft 365 native protocols; PGP and S/MIME; mobile; AI drafting.
 
 ## 6. Design
 
-The static mockup in [design/mockup.html](design/mockup.html) is the reference for layout, spacing and colour. The style is OpenWren's own: calm, rounded and light, closer to current web mail apps than to Outlook's ribbon. It shows seven screens: main window, search, compose, signature settings, add account, server settings, and sync and storage.
+The static mockup in [design/mockup.html](design/mockup.html) is the reference for layout, spacing and colour. It is the upstream OpenWren design reference; VN Mail's look has since diverged — five colour themes, and the soft-blue default — but the layout and spacing still follow it. The style is VN Mail's own: calm, rounded and light, closer to current web mail apps than to Outlook's ribbon. It shows seven screens: main window, search, compose, signature settings, add account, server settings, and sync and storage.
 
 ### 6.1 Window structure
 
@@ -271,7 +264,7 @@ The static mockup in [design/mockup.html](design/mockup.html) is the reference f
 | Danger | `#C62828` | `#FF8A80` |
 
 - The blue is always soft and light. There are no solid deep-blue surfaces: the primary button is a light blue pill with dark blue text.
-- The accent colour is one setting, so alternative accents can be offered later under Appearance.
+- The accent colour is one setting; the five colour themes under Appearance build on these tokens.
 - Font: Inter, bundled; fallback `system-ui`. Sizes: 14 px body, 12 px metadata, 20 px message subject.
 - Shape: pill buttons, chips, search box and folder rows (fully rounded); 10 px inputs and list rows; 14 px cards and window. Spacing on a 4 px grid.
 - Borders are 1 px hairlines; shadows only on floating things (menus, dialogs).
@@ -309,7 +302,7 @@ Each milestone ends with something you can run and check.
 
 | # | Milestone | Contents | Done when |
 |---|---|---|---|
-| 0 | Scaffold | Tauri + React + Tailwind project, typed command bindings, SQLite with migrations, theme tokens, CI (lint, tests, build), GPL licence | The app opens an empty themed window on Linux; CI is green |
+| 0 | Scaffold | Tauri + React + Tailwind project, typed command bindings, SQLite with migrations, theme tokens, CI (lint, tests, build), Apache-2.0 licence | The app opens an empty themed window; CI is green |
 | 1 | Static shell | Header, three resizable panes, action row, base components (button, chip, input, menu, dialog), light and dark themes, all built from sample data | The app matches the main-window mockup with fake mail |
 | 2 | IMAP read | Add-account wizard (IMAP), keyring, folder list, two-pass sync, message list (virtualised), reading pane with sanitised HTML, attachments, IDLE | A real IMAP mailbox with 50,000+ messages can be browsed, including its oldest mail, and new mail appears within seconds |
 | 3 | Send and signatures | SMTP, composer, reply / forward, drafts, attachments, autocomplete, signature editor and per-account defaults, outbox, undo send | A message with a signature and an attachment can be written, sent and found in Sent |
@@ -318,7 +311,7 @@ Each milestone ends with something you can run and check.
 | 6 | Search | FTS5 index, query language, filter chips and date presets, year grouping, highlighting, server fallback | A message from two or more years ago is found by sender, subject or body text in under a second |
 | 7 | POP3 | POP3 download, leave-on-server options, local folders | A POP3 account downloads mail and sends through its SMTP server |
 | 8 | Outlook polish | Focused / Other, snooze, send later, rules, quick steps, sweep, notifications, tray, shortcuts, remaining settings pages, density options, import / export | The feature list in section 5 is complete |
-| 9 | Release | AppImage and .deb builds, auto-update, user documentation, contributor guide, first public release | A fresh Linux machine can install and use v1.0 |
+| 9 | Release | AppImage, .deb and .rpm builds, Windows installer, macOS disk image, signed in-app updater, user documentation, contributor guide, first public release | A fresh machine on Linux, Windows or macOS can install VN Mail and update it in-app |
 
 Order matters: milestones 0–3 give a usable IMAP client; 4 and 6 deliver your two stated priorities (Gmail and old-mail search); the rest is breadth.
 
@@ -346,7 +339,7 @@ Order matters: milestones 0–3 give a usable IMAP client; 4 and 6 deliver your 
 
 ## 10. Status
 
-Last updated 12 November 2026. "Tested" means covered by automated tests against local Dovecot (IMAP) and SMTP test servers, or checked in the running app.
+Last updated 25 November 2026. Version 0.1.17. "Tested" means covered by automated tests against local Dovecot (IMAP) and SMTP test servers, or checked in the running app.
 
 | # | Milestone | State |
 |---|---|---|
@@ -358,7 +351,7 @@ Last updated 12 November 2026. "Tested" means covered by automated tests against
 | 6 | Search | Done and tested: full-text index, operators, date chips and custom range, server search |
 | 7 | POP3 | Removed on request: POP3 is no longer supported. Accounts are IMAP or Gmail. |
 | 8 | Polish | Mostly done: Focused / Other with per-sender override, snooze, rules, sweep, notifications, shortcuts, settings pages, density, save as .eml |
-| 9 | Release | .deb build and documentation. No AppImage, auto-update or public release yet. |
+| 9 | Release | Done: releases on Linux (.deb, .rpm, .AppImage), Windows (.exe, NSIS) and macOS (.dmg universal + .app.tar.gz), with a signed in-app updater (minisign, `latest.json`) since 0.1.15 |
 
 ### Differences from the plan
 
@@ -380,12 +373,18 @@ Last updated 12 November 2026. "Tested" means covered by automated tests against
 - **Favourites:** add or remove a folder with the star that appears on hover, or by right-click.
 - **Sync button** in the header, **tray icon** with Open, Sync now and Quit, and an **About** page in Settings.
 
-- **Tray:** closing the window keeps OpenWren running in the tray (can be turned off in Settings, Notifications). Starting it again shows the running window.
+- **Tray:** closing the window keeps VN Mail running in the tray (can be turned off in Settings, Notifications). Starting it again shows the running window.
 - **Privacy:** tracking pixels and tracking link parameters are removed; warnings for failed sender checks (SPF, DKIM, DMARC), company names on foreign addresses and links that show one site but lead to another; unsubscribe from mailings (RFC 8058 one-click, mail or web page).
 - **Company logos:** 199 logos from Simple Icons, bundled and matched by the sender's domain. Amazon, Microsoft, LinkedIn, Slack and Adobe are not in that set. Fetching site icons online was decided against.
 - **Signatures:** optional picture, left of or above the text, sent inside the message.
 - **Launcher:** `scripts/install-launcher.sh` adds the app and its icon to the applications menu.
+- **Signed in-app updater:** the Release workflow signs the updatable packages and `latest.json` with minisign; the app offers new versions in-app and installs them after checking the signature (since 0.1.15).
+- **Translation:** mail translated in 16 languages, via Google Translate only. The anonymous MyMemory fallback was removed for privacy.
+- **Five colour themes** under Appearance (default soft blue).
+- **Unread badge on the taskbar:** the unread count, Discord-style (1–9 as a number, 10 or more as 9+).
+- **Signature pictures with stored sizes:** the picture's size is stored in the backend, so a signature picture keeps its size in sent mail.
+- **Anonymous usage statistics removed:** upstream OpenWren counted users with one anonymous request a day; VN Mail does not send it.
 
 ### Not built
 
-Quick steps, unread count on the tray icon, import of .eml / .mbox, mbox export, account editing after creation (remove and add again), folder create / rename / delete, AppImage, auto-update, STARTTLS and TLS tested against a real provider.
+Quick steps, import of .eml / .mbox, mbox export, account editing after creation (remove and add again), folder create / rename / delete, STARTTLS and TLS tested against a real provider.

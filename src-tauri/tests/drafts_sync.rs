@@ -1,5 +1,5 @@
 //! Drafts are kept on the server too. Against the local Dovecot test server:
-//! `OPENWREN_TEST_IMAP=127.0.0.1:3143 cargo test --test drafts_sync`
+//! `VNMAIL_TEST_IMAP=127.0.0.1:3143 cargo test --test drafts_sync`
 
 use std::sync::{Arc, Mutex};
 
@@ -10,8 +10,8 @@ use vnmail_lib::{imap, store};
 
 #[tokio::test]
 async fn a_draft_is_uploaded_replaced_and_removed() {
-    let Ok(target) = std::env::var("OPENWREN_TEST_IMAP") else {
-        eprintln!("OPENWREN_TEST_IMAP not set; skipping");
+    let Ok(target) = std::env::var("VNMAIL_TEST_IMAP") else {
+        eprintln!("VNMAIL_TEST_IMAP not set; skipping");
         return;
     };
     let (host, port) = target.split_once(':').unwrap();

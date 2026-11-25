@@ -39,7 +39,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 The end-to-end tests talk to a local mail server. Start it with `sh tests/mail-server.sh` (needs Docker), then:
 
 ```bash
-OPENWREN_TEST_IMAP=127.0.0.1:3143 OPENWREN_TEST_SMTP=127.0.0.1:3025 cargo test --manifest-path src-tauri/Cargo.toml
+VNMAIL_TEST_IMAP=127.0.0.1:3143 VNMAIL_TEST_SMTP=127.0.0.1:3025 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 A change to the engine needs a test. A change to a screen needs a before and after screenshot in the pull request.

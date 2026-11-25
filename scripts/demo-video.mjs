@@ -12,7 +12,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
-const url = process.env.OPENWREN_URL ?? "http://localhost:1420";
+const url = process.env.VNMAIL_URL ?? "http://localhost:1420";
 const site = new URL("../website/public/screens/", import.meta.url).pathname;
 const size = { width: 1280, height: 800 };
 

@@ -1,7 +1,7 @@
 //! End-to-end sync against the local Dovecot test server.
 //!
 //! Start the server with `sh tests/mail-server.sh` (from the repository root), then run
-//! `OPENWREN_TEST_IMAP=127.0.0.1:3143 cargo test --test imap_sync -- --nocapture`.
+//! `VNMAIL_TEST_IMAP=127.0.0.1:3143 cargo test --test imap_sync -- --nocapture`.
 //! Without that variable the test is skipped, so plain `cargo test` needs no server.
 
 use std::sync::{Arc, Mutex};
@@ -14,7 +14,7 @@ use vnmail_lib::{imap, store};
 const USER: &str = "katy@work.test";
 
 fn settings() -> Option<ImapSettings> {
-    let target = std::env::var("OPENWREN_TEST_IMAP").ok()?;
+    let target = std::env::var("VNMAIL_TEST_IMAP").ok()?;
     let (host, port) = target.split_once(':')?;
     Some(ImapSettings { host: host.into(), port: port.parse().ok()?, security: Security::None, username: USER.into() })
 }
@@ -26,7 +26,7 @@ fn filters(date: &str) -> SearchFilters {
 #[tokio::test]
 async fn syncs_reads_and_searches_a_real_mailbox() {
     let Some(imap_settings) = settings() else {
-        eprintln!("OPENWREN_TEST_IMAP not set; skipping");
+        eprintln!("VNMAIL_TEST_IMAP not set; skipping");
         return;
     };
     let db: Db = Arc::new(Mutex::new(store::open_in_memory().unwrap()));

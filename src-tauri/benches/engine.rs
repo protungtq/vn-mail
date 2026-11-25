@@ -1,9 +1,9 @@
 //! Engine benchmarks: how long the things a user waits for take, on an
 //! encrypted mailbox of a known size. Run with `cargo bench --bench engine`.
 //!
-//! Sizes come from `OPENWREN_BENCH_SIZES` (default "50000,200000"). With
-//! `OPENWREN_TEST_IMAP=host:port` set, sync speed is measured against that
-//! server for the user in `OPENWREN_BENCH_USER` (default bench@work.test).
+//! Sizes come from `VNMAIL_BENCH_SIZES` (default "50000,200000"). With
+//! `VNMAIL_TEST_IMAP=host:port` set, sync speed is measured against that
+//! server for the user in `VNMAIL_BENCH_USER` (default bench@work.test).
 //! Output is a Markdown table, as used in docs/benchmarks.md.
 
 use std::sync::{Arc, Mutex};
@@ -96,8 +96,8 @@ fn engine(count: usize) {
 
 /// Headers and message texts per second from an IMAP server into an encrypted database.
 fn sync_speed(target: &str) {
-    let (host, port) = target.split_once(':').expect("OPENWREN_TEST_IMAP must be host:port");
-    let user = std::env::var("OPENWREN_BENCH_USER").unwrap_or_else(|_| "bench@work.test".into());
+    let (host, port) = target.split_once(':').expect("VNMAIL_TEST_IMAP must be host:port");
+    let user = std::env::var("VNMAIL_BENCH_USER").unwrap_or_else(|_| "bench@work.test".into());
     let settings = ServerSettings { host: host.into(), port: port.parse().unwrap(), security: Security::None, username: user.clone() };
     let path = std::env::temp_dir().join(format!("vnmail-bench-sync-{}.db", std::process::id()));
     let _ = std::fs::remove_file(&path);
@@ -128,11 +128,11 @@ fn sync_speed(target: &str) {
 
 fn main() {
     // `cargo bench` passes flags such as --bench; none are needed here.
-    let sizes = std::env::var("OPENWREN_BENCH_SIZES").unwrap_or_else(|_| "50000,200000".into());
+    let sizes = std::env::var("VNMAIL_BENCH_SIZES").unwrap_or_else(|_| "50000,200000".into());
     for size in sizes.split(',').filter_map(|s| s.trim().parse::<usize>().ok()) {
         engine(size);
     }
-    if let Ok(target) = std::env::var("OPENWREN_TEST_IMAP") {
+    if let Ok(target) = std::env::var("VNMAIL_TEST_IMAP") {
         sync_speed(&target);
     }
 }

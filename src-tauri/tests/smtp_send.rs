@@ -1,6 +1,6 @@
 //! Sending through the local SMTP test sink, which delivers into Dovecot.
 //! Needs `sh tests/mail-server.sh`; run with
-//! `OPENWREN_TEST_IMAP=127.0.0.1:3143 OPENWREN_TEST_SMTP=127.0.0.1:3025 cargo test --test smtp_send`.
+//! `VNMAIL_TEST_IMAP=127.0.0.1:3143 VNMAIL_TEST_SMTP=127.0.0.1:3025 cargo test --test smtp_send`.
 
 use vnmail_lib::model::{Security, ServerSettings};
 use vnmail_lib::{imap, parse, smtp};
@@ -13,8 +13,8 @@ fn server(var: &str, user: &str) -> Option<ServerSettings> {
 
 #[tokio::test]
 async fn a_sent_message_arrives_with_its_attachment() {
-    let (Some(smtp_settings), Some(imap_settings)) = (server("OPENWREN_TEST_SMTP", "katy@work.test"), server("OPENWREN_TEST_IMAP", "receiver@work.test")) else {
-        eprintln!("OPENWREN_TEST_SMTP / OPENWREN_TEST_IMAP not set; skipping");
+    let (Some(smtp_settings), Some(imap_settings)) = (server("VNMAIL_TEST_SMTP", "katy@work.test"), server("VNMAIL_TEST_IMAP", "receiver@work.test")) else {
+        eprintln!("VNMAIL_TEST_SMTP / VNMAIL_TEST_IMAP not set; skipping");
         return;
     };
     let secret = smtp::Secret::Password("pass".into());

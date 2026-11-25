@@ -1,6 +1,8 @@
 # Benchmarks
 
-How fast OpenWren is, measured, with the method and the commands to repeat it. Nothing here is estimated.
+How fast VN Mail is, measured, with the method and the commands to repeat it. Nothing here is estimated.
+
+These numbers were measured on 13 November 2026, on v0.1.0 of the engine VN Mail forked from. The engine has not changed since, so they still describe VN Mail.
 
 **Machine:** Intel Core Ultra 7 155H (22 threads), 32 GB memory, NVMe disk, Ubuntu 26.04, Linux 7.0. **Date:** 13 November 2026. **Version:** 0.1.0, release build.
 
@@ -12,7 +14,7 @@ Measured by `scripts/bench.sh` on a mailbox of 50,000 messages.
 
 | What | Result | How it is measured |
 |---|---|---|
-| Start-up, first start | 0.64 s | From process start until the inbox list is drawn; the app reports it itself when `OPENWREN_TIMING` is set |
+| Start-up, first start | 0.64 s | From process start until the inbox list is drawn; the app reports it itself when `VNMAIL_TIMING` is set |
 | Start-up, later starts | 0.57 s (median of 4) | Same |
 | Memory, idle with the inbox open | 288 MB | Proportional memory (PSS) of the app and the two WebKit processes after 60 s |
 | Processor time while idle | 0.54 s over 5 minutes (0.2% of one core) | CPU time of the same processes between minute 1 and minute 6 |
@@ -105,7 +107,7 @@ python3 tests/seed_mail.py 127.0.0.1 3143 bench@work.test pass 10000
 ```
 
 ```bash
-OPENWREN_TEST_IMAP=127.0.0.1:3143 cargo bench --manifest-path src-tauri/Cargo.toml --bench engine
+VNMAIL_TEST_IMAP=127.0.0.1:3143 cargo bench --manifest-path src-tauri/Cargo.toml --bench engine
 ```
 
 The whole-app numbers need a release build and a desktop session; the window opens and closes several times. It uses a temporary mailbox and does not touch your own mail:

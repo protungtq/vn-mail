@@ -43,12 +43,12 @@ pub fn mark_start() {
 }
 
 /// The interface calls this once, right after it has drawn the first message list.
-/// With `OPENWREN_TIMING` set it prints how long start-up took; `OPENWREN_TIMING=exit`
+/// With `VNMAIL_TIMING` set it prints how long start-up took; `VNMAIL_TIMING=exit`
 /// also quits, so a script can measure many starts in a row. Otherwise it does nothing.
 #[tauri::command]
 fn mark_ready(app: AppHandle) {
     static DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    let Some(mode) = std::env::var_os("OPENWREN_TIMING") else { return };
+    let Some(mode) = std::env::var_os("VNMAIL_TIMING") else { return };
     if DONE.swap(true, std::sync::atomic::Ordering::Relaxed) {
         return;
     }

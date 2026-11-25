@@ -20,7 +20,7 @@ if pgrep -x vnmail >/dev/null; then echo "Close VN Mail first." >&2; exit 1; fi
 data=$(mktemp -d)
 trap 'pkill -x vnmail 2>/dev/null || true; rm -rf "$data"' EXIT
 (cd "$root/src-tauri" && cargo run --quiet --release --example make_bench_data -- "$data" "$count")
-export XDG_DATA_HOME="$data" OPENWREN_NO_STATS=1
+export XDG_DATA_HOME="$data"
 
 # Every process the app started: itself and the web view's helpers.
 tree() { local pid=$1; echo "$pid"; for child in $(pgrep -P "$pid" || true); do tree "$child"; done; }
@@ -30,7 +30,7 @@ echo "## Start-up ($count messages, $starts starts)"
 inside=(); wall=()
 for i in $(seq "$starts"); do
   t0=$(date +%s%N)
-  ms=$(OPENWREN_TIMING=exit "$bin" 2>&1 >/dev/null | awk '/^vnmail-ready-ms/ { print $2 }')
+  ms=$(VNMAIL_TIMING=exit "$bin" 2>&1 >/dev/null | awk '/^vnmail-ready-ms/ { print $2 }')
   t1=$(date +%s%N)
   inside+=("$ms"); wall+=("$(( (t1 - t0) / 1000000 ))")
   echo "start $i: inbox on screen after ${ms} ms (whole run, including quitting: ${wall[-1]} ms)"

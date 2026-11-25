@@ -1,5 +1,5 @@
 //! Blocked senders against the local Dovecot test server:
-//! `OPENWREN_TEST_IMAP=127.0.0.1:3143 cargo test --test blocked_sync`
+//! `VNMAIL_TEST_IMAP=127.0.0.1:3143 cargo test --test blocked_sync`
 
 use std::sync::{Arc, Mutex};
 
@@ -10,8 +10,8 @@ use vnmail_lib::{blocked, imap, store};
 
 #[tokio::test]
 async fn new_mail_from_a_blocked_sender_goes_to_junk() {
-    let Ok(target) = std::env::var("OPENWREN_TEST_IMAP") else {
-        eprintln!("OPENWREN_TEST_IMAP not set; skipping");
+    let Ok(target) = std::env::var("VNMAIL_TEST_IMAP") else {
+        eprintln!("VNMAIL_TEST_IMAP not set; skipping");
         return;
     };
     let (host, port) = target.split_once(':').unwrap();

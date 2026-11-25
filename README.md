@@ -314,7 +314,7 @@ sh tests/mail-server.sh
 ```
 
 ```bash
-OPENWREN_TEST_IMAP=127.0.0.1:3143 OPENWREN_TEST_SMTP=127.0.0.1:3025 cargo test --manifest-path src-tauri/Cargo.toml
+VNMAIL_TEST_IMAP=127.0.0.1:3143 VNMAIL_TEST_SMTP=127.0.0.1:3025 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 `pnpm dev` runs the interface in a browser on sample mail, with no mail server
