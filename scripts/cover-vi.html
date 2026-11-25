@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- The Vietnamese README banner. scripts/render-cover-vi.mjs renders this page to docs/vi/cover.png. -->
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Inter";
+        src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+      }
+      html, body { margin: 0; height: 100%; }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background: #256ef3;
+        color: #fff;
+        display: flex;
+        overflow: hidden;
+      }
+      .text { width: 520px; padding: 0 0 0 72px; display: flex; flex-direction: column; justify-content: center; flex: none; }
+      .brand { display: flex; align-items: center; gap: 16px; font-size: 34px; }
+      .brand img { width: 60px; height: 60px; border-radius: 15px; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35); }
+      h1 { font-size: 52px; line-height: 1.08; font-weight: 600; margin: 34px 0 18px; letter-spacing: -0.02em; }
+      p { font-size: 21px; line-height: 1.45; margin: 0; color: #dbe7ff; }
+      .tags { display: flex; gap: 10px; margin-top: 30px; flex-wrap: wrap; }
+      .tags span { font-size: 15px; padding: 7px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); }
+      .shot { position: relative; flex: 1; }
+      .shot img {
+        position: absolute; left: 56px; top: 76px; width: 1040px;
+        border-radius: 14px; box-shadow: 0 30px 80px rgba(8, 30, 90, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.25);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="text">
+      <div class="brand"><img src="../design/icon.svg" alt="" />VN Mail</div>
+      <h1>Thư vẫn là của bạn</h1>
+      <p>Ứng dụng thư hiện đại, đặt riêng tư lên hàng đầu, cho Linux, Windows và macOS. Miễn phí và mã nguồn mở, xây dựng bằng Rust và React.</p>
+      <div class="tags"><span>Gmail và IMAP</span><span>Mã hóa trên máy tính của bạn</span><span>Chặn theo dõi</span></div>
+    </div>
+    <div class="shot"><img src="../docs/vi/inbox.png" alt="" /></div>
+  </body>
+</html>
