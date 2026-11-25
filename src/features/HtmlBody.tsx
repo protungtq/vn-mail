@@ -50,9 +50,11 @@ export function HtmlBody({ html, note, sender, confirmed }: { html: string; note
   // from outside. So every link is pointed at a blank page of the app itself, with
   // the real address after the #; `onLoad` sees the frame arrive there and opens it.
   const framed = useMemo(() => {
-    const parsed = new DOMParser().parseFromString(html, "text/html");
+    // Template contents are inert until inserted into the CSP-protected frame.
+    const parsed = document.createElement("template");
+    parsed.innerHTML = html;
     const stop = new URL("link.html", window.location.href).href;
-    for (const link of Array.from(parsed.querySelectorAll("a[href]"))) {
+    for (const link of Array.from(parsed.content.querySelectorAll("a[href]"))) {
       const href = link.getAttribute("href") ?? "";
       link.removeAttribute("target");
       if (!/^(https?:|mailto:)/i.test(href)) {
@@ -63,7 +65,7 @@ export function HtmlBody({ html, note, sender, confirmed }: { html: string; note
       if (!link.getAttribute("title")) link.setAttribute("title", href);
       link.setAttribute("href", `${stop}#${encodeURIComponent(href)}`);
     }
-    return parsed.body.innerHTML;
+    return parsed.innerHTML;
   }, [html]);
   /** Bumped to draw the frame afresh after a link took it away. */
   const [shown, setShown] = useState(0);

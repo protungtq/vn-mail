@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -23,6 +24,16 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Install WebKitGTK test dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-webkit2-4.1 xvfb xauth
+      - name: Check remote images in WebKitGTK
+        run: |
+          pnpm exec vite --host 127.0.0.1 > "$RUNNER_TEMP/vnmail-vite.log" 2>&1 &
+          vite_pid=$!
+          trap 'kill "$vite_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 15 --retry-connrefused --retry-delay 1 \
+            http://127.0.0.1:1420/tests/webkit-mail.html > /dev/null
+          xvfb-run -a /usr/bin/python3 tests/webkit-mail.py
 
   engine:
     runs-on: ubuntu-latest

@@ -7,8 +7,8 @@
 🇻🇳 [Tiếng Việt](README-vi.md)
 
 > A fork of [OpenWren](https://github.com/VinceGHER/openwren) (Apache-2.0),
-> renamed with its own icon and app identifier. The update check and the
-> anonymous usage count are disabled: VN Mail has no server for them.
+> renamed with its own icon and app identifier. It checks for updates through
+> GitHub Releases and keeps anonymous usage counts disabled.
 
 A modern, privacy-first mail app that keeps your mail on your computer. Free
 and open source, for [Linux, Windows and macOS](https://github.com/protungtq/vn-mail/releases).
@@ -67,11 +67,9 @@ Download the installer for your system from
 
 For 64-bit Windows 10 and 11. Tested on Windows 11.
 
-1. Download the `*-setup.exe` file and run it.
-2. The installer is not signed with a certificate yet, so Windows may show
-   "Windows protected your PC": choose **More info**, then **Run anyway**.
-3. Follow the installer. It installs for your user only and needs no
-   administrator rights.
+1. Download the `*-setup.exe` file and `SHA256SUMS` from the same official GitHub release.
+2. In PowerShell, run `Get-FileHash -Algorithm SHA256 -LiteralPath '.\VN.Mail_0.1.15_x64-setup.exe'` in the download folder, using the actual installer filename. Compare the result with the corresponding entry in `SHA256SUMS`. GitHub may display dots where the checksum file lists spaces.
+3. The Windows installer currently has no Authenticode signature, so SmartScreen may show a warning. The SHA-256 check confirms the download matches the published file. In-app updates verify a separate Tauri signature.
 
 ### macOS
 
@@ -90,8 +88,7 @@ xattr -cr /Applications/VN Mail.app
 
 ### Linux
 
-No Linux packages are published for this fork yet. Build from source,
-as described below.
+Download the `.deb`, `.rpm` or `.AppImage` package from GitHub Releases. You can also build from source as described below.
 
 ### Build from source
 
@@ -224,7 +221,7 @@ Archive, delete and snooze are one click. Move by menu or by dragging onto a fol
 
 **Private, and you can check**
 
-Mail is stored in an encrypted database; passwords stay in the system keyring. Every protection has a switch, and VN Mail makes no requests for itself: no usage count, no update check.
+Mail is stored in an encrypted database and passwords stay in the system keyring. VN Mail checks GitHub for updates and sends no usage statistics.
 
 </td>
 </tr>
@@ -242,10 +239,10 @@ A short welcome adds your first account and lets you pick the theme, text size a
 
 ## Privacy
 
-VN Mail has no server of its own that sees your mail. It talks to your mail
-servers, and to nobody else unless you ask (showing remote images, signing in
-with Google, unsubscribing). It sends no usage count and checks for no new
-version: both are disabled in this fork.
+VN Mail has no server of its own that sees your mail. It connects to your mail
+servers and checks GitHub for updates. Showing remote images, Google sign-in,
+unsubscribing and confirming a translation can contact other services. VN Mail
+sends no usage statistics.
 
 Every request the app makes is listed in [PRIVACY.md](PRIVACY.md).
 
