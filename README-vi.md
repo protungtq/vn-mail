@@ -1,7 +1,7 @@
 Read this in [English](README.md).
 
 <p align="center">
-  <img src="docs/cover.png" alt="VN Mail: thư vẫn là của bạn. Ứng dụng thư hiện đại, đặt riêng tư lên hàng đầu, mã nguồn mở, xây dựng bằng Rust và React.">
+  <img src="docs/vi/cover.png" alt="VN Mail: thư vẫn là của bạn. Ứng dụng thư hiện đại, đặt riêng tư lên hàng đầu, mã nguồn mở, xây dựng bằng Rust và React.">
 </p>
 
 # VN Mail
