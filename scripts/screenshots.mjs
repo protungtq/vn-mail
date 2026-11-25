@@ -88,7 +88,7 @@ async function features(page, open, row) {
 
   // Several accounts, one inbox.
   await open();
-  await page.locator('nav[aria-label=Folders] button', { hasText: "All inboxes" }).click();
+  await page.locator('nav[aria-label=Folders] button', { hasText: "All Inbox" }).click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: join(dir, "accounts.png"), clip: left });
 
