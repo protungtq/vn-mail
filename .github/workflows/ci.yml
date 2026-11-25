@@ -8,8 +8,6 @@ permissions:
   contents: read
 
 env:
-  # Automated runs never send the anonymous usage request.
-  OPENWREN_NO_STATS: "1"
 
 jobs:
   interface:
